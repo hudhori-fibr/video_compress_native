@@ -47,7 +47,9 @@
 	<true/>
 	
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Aplikasi ini memerlukan akses ke galeri untuk memilih dan memproses video.</string>
+    <string>Aplikasi membutuhkan akses ke galeri foto/video untuk memilih dan memproses video.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Aplikasi membutuhkan izin untuk menyimpan hasil video ke galeri.</string>
 
 </dict>
 </plist>

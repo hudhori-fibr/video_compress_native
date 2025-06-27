@@ -8,8 +8,8 @@ public class VideoCompressNativePlugin: NSObject, FlutterPlugin, FlutterStreamHa
   private var timer: Timer?
 
   public static func register(with registrar: FlutterPluginRegistrar) {
-    let methodChannel = FlutterMethodChannel(name: "video_compress_native/method", binaryMessenger: registrar.messenger())
-    let methodChannel = FlutterEventChannel(name: "video_compress_native/event", binaryMessenger: registrar.messenger())
+    let methodChannel = FlutterMethodChannel(name: "com.hudhodev.video_compress_native/method", binaryMessenger: registrar.messenger())
+    let eventChannel = FlutterEventChannel(name: "com.hudhodev.video_compress_native/event", binaryMessenger: registrar.messenger())
     let instance = VideoCompressNativePlugin()
     registrar.addMethodCallDelegate(instance, channel: methodChannel)
     eventChannel.setStreamHandler(instance)

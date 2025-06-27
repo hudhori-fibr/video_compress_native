@@ -68,18 +68,17 @@ class _VideoProcessorPageState extends State<VideoProcessorPage> {
   Future<bool> requestMediaPermission() async {
     if (Platform.isAndroid) {
       // Request dua permission sekaligus, biar aman di Android 13+ dan versi lama
-      final statuses = await [
-        Permission.videos,
-        Permission.storage,
-      ].request();
+      final statuses = await [Permission.videos, Permission.storage].request();
 
       final videoGranted = statuses[Permission.videos]?.isGranted ?? false;
       final storageGranted = statuses[Permission.storage]?.isGranted ?? false;
 
       if (videoGranted || storageGranted) return true;
 
-      final videoDenied = statuses[Permission.videos]?.isPermanentlyDenied ?? false;
-      final storageDenied = statuses[Permission.storage]?.isPermanentlyDenied ?? false;
+      final videoDenied =
+          statuses[Permission.videos]?.isPermanentlyDenied ?? false;
+      final storageDenied =
+          statuses[Permission.storage]?.isPermanentlyDenied ?? false;
 
       if (videoDenied || storageDenied) {
         await _showPermissionDialog();
@@ -89,9 +88,10 @@ class _VideoProcessorPageState extends State<VideoProcessorPage> {
       final status = await Permission.photos.request();
       if (status.isGranted) return true;
       if (status.isPermanentlyDenied) {
-        await _showPermissionDialog();
+        return true;
+        // await _showPermissionDialog();
       }
-      return false;
+      return true;
     }
     return false;
   }
