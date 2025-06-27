@@ -13,6 +13,10 @@ import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.EventChannel.StreamHandler
 import io.flutter.plugin.common.EventChannel.EventSink
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.UUID
 
 /** VideoCompressNativePlugin */
 class VideoCompressNativePlugin: FlutterPlugin, MethodCallHandler, StreamHandler {
@@ -45,22 +49,27 @@ class VideoCompressNativePlugin: FlutterPlugin, MethodCallHandler, StreamHandler
     videoProcessor.cancel()
   }
 
+  private fun generateOutputFilePath(destDir: File, ext: String = "mp4"): String {
+    val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(Date())
+    val uuid = UUID.randomUUID().toString().substring(0, 8)
+    return File(destDir, "VID_${timeStamp}_$uuid.$ext").absolutePath
+  }
+
   private fun handleProcessVideo(call: MethodCall, result: Result) {
     try {
       val path = call.argument<String>("path")!!
       val startTimeMs = (call.argument<Double>("startTime")!! * 1000).toLong()
       val endTimeMs = (call.argument<Double>("endTime")!! * 1000).toLong()
       val resolutionHeight = call.argument<Int?>("resolutionHeight")
-      
-      val outputFile = File.createTempFile("processed_", ".mp4", context.cacheDir)
+      val outputPath = generateOutputFilePath(context.cacheDir)
 
       videoProcessor.processVideo(
         context = context,
         sourcePath = path,
-        destPath = outputFile.absolutePath,
+        destPath = outputPath,
         startTimeMs = startTimeMs,
         endTimeMs = endTimeMs,
-        targetHeight = resolutionHeight,
+        targetHeight = resolutionHeight ?: 480,
         progressCallback = { progress -> sendProgress(progress.toDouble() / 100.0) },
         completionCallback = { res -> handleCompletion(res, result) }
       )
@@ -74,13 +83,12 @@ class VideoCompressNativePlugin: FlutterPlugin, MethodCallHandler, StreamHandler
       val path = call.argument<String>("path")!!
       val startTimeMs = (call.argument<Double>("startTime")!! * 1000).toLong()
       val endTimeMs = (call.argument<Double>("endTime")!! * 1000).toLong()
-      
-      val outputFile = File.createTempFile("trimmed_only_", ".mp4", context.cacheDir)
+      val outputPath = generateOutputFilePath(context.cacheDir)
 
       videoProcessor.trimVideoOnly(
         context = context,
         sourcePath = path,
-        destPath = outputFile.absolutePath,
+        destPath = outputPath,
         startTimeMs = startTimeMs,
         endTimeMs = endTimeMs,
         progressCallback = { progress -> sendProgress(progress.toDouble() / 100.0) },

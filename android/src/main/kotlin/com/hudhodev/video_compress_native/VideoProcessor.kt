@@ -1,49 +1,137 @@
 package com.hudhodev.video_compress_native
-
 import android.content.Context
 import android.os.Handler
 import android.os.HandlerThread
-import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.media3.common.Effect
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.Presentation
+import androidx.media3.effect.LanczosResample
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultEncoderFactory
 import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.EditedMediaItemSequence
 import androidx.media3.transformer.ExportResult
-import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.Transformer
 import androidx.media3.transformer.Effects
-import androidx.media3.transformer.ExportException
-import androidx.media3.transformer.TransformationRequest
 import java.io.File
-import java.util.concurrent.Executors // Import tambahan
+import java.util.UUID
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import androidx.media3.transformer.ExportException
+import androidx.media3.transformer.ProgressHolder
 
 @OptIn(UnstableApi::class)
 class VideoProcessor {
     private var transformer: Transformer? = null
     private var handlerThread: HandlerThread? = null
-    private val progressHandler = Handler(Looper.getMainLooper()) // Handler untuk update UI dari thread lain
-    private var progressRunnable: Runnable? = null // Runnable untuk memantau progres
+    private var progressHandler: Handler? = null
+
+    private fun generateOutputFilePath(destDir: String, ext: String = "mp4"): String {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(Date())
+        val uuid = UUID.randomUUID().toString().substring(0, 8)
+        return "$destDir/VID_${timeStamp}_$uuid.$ext"
+    }
 
     fun processVideo(
         context: Context,
         sourcePath: String,
         destPath: String,
-        startTimeMs: Long,
-        endTimeMs: Long,
-        targetHeight: Int?,
+        startTimeMs: Long = 0L,
+        endTimeMs: Long = 90_000L,
+        targetHeight: Int = 480,
         progressCallback: (Int) -> Unit,
         completionCallback: (Result<String>) -> Unit
     ) {
-        cancel() // Pastikan operasi sebelumnya dibatalkan
-
+        cancel()
         handlerThread = HandlerThread("VideoProcessorThread")
         handlerThread?.start()
-        val looper = handlerThread!!.looper // Dapatkan looper dari thread
+
+        runOnProcessorThread {
+            val mediaItem = MediaItem.Builder()
+                .setUri(sourcePath)
+                .setClippingConfiguration(
+                    MediaItem.ClippingConfiguration.Builder()
+                        .setStartPositionMs(startTimeMs)
+                        .setEndPositionMs(endTimeMs)
+                        .build()
+                )
+                .build()
+
+            val videoEffects = mutableListOf<Effect>()
+            videoEffects.add(LanczosResample.scaleToFit(10000, targetHeight))
+            videoEffects.add(Presentation.createForHeight(targetHeight))
+
+            val effects = Effects(listOf(), videoEffects)
+
+            val editedMediaItem = EditedMediaItem.Builder(mediaItem)
+                .setEffects(effects)
+                .build()
+
+            val editedMediaItemSequence = EditedMediaItemSequence(editedMediaItem)
+            val composition = Composition.Builder(editedMediaItemSequence).build()
+
+            val listener = object : Transformer.Listener {
+                override fun onCompleted(composition: Composition, result: ExportResult) {
+                    completionCallback(Result.success(destPath))
+                    releaseThread()
+                }
+                override fun onError(
+                    composition: Composition,
+                    result: ExportResult,
+                    exception: ExportException
+                ) {
+                    completionCallback(Result.failure(exception))
+                    releaseThread()
+                }
+            }
+
+            val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
+                .setEnableFallback(true)
+                .build()
+
+            val transformer = Transformer.Builder(context.applicationContext)
+                .setEncoderFactory(encoderFactory)
+                .setLooper(handlerThread!!.looper)
+                .addListener(listener)
+                .build()
+
+            this.transformer = transformer
+            File(destPath).delete()
+            transformer.start(composition, destPath)
+
+            // Progress polling
+            progressHandler = Handler(handlerThread!!.looper)
+            val progressHolder = ProgressHolder()
+            val pollRunnable = object : Runnable {
+                override fun run() {
+                    transformer.getProgress(progressHolder)
+                    Handler(context.mainLooper).post {
+                        progressCallback(progressHolder.progress)
+                    }
+                    if (progressHolder.progress < 100) {
+                        progressHandler?.postDelayed(this, 500)
+                    }
+                }
+            }
+            progressHandler?.post(pollRunnable)
+        }
+    }
+
+    fun trimVideoOnly(
+        context: Context,
+        sourcePath: String,
+        destPath: String,
+        startTimeMs: Long = 0L,
+        endTimeMs: Long = 90_000L,
+        progressCallback: (Int) -> Unit,
+        completionCallback: (Result<String>) -> Unit
+    ) {
+        cancel()
+        handlerThread = HandlerThread("VideoProcessorTrimThread")
+        handlerThread?.start()
 
         val mediaItem = MediaItem.Builder()
             .setUri(sourcePath)
@@ -56,225 +144,80 @@ class VideoProcessor {
             .build()
 
         val videoEffects = mutableListOf<Effect>()
-        if (targetHeight != null && targetHeight > 0) {
-            val presentation = Presentation.createForHeight(targetHeight)
-            videoEffects.add(presentation)
-        }
+        videoEffects.add(LanczosResample.scaleToFit(10000, 480))
+        videoEffects.add(Presentation.createForHeight(480))
 
-        val effects = Effects(
-            listOf(), // Tidak ada audio effects
-            videoEffects
-        )
+        val effects = Effects(listOf(), videoEffects)
 
         val editedMediaItem = EditedMediaItem.Builder(mediaItem)
             .setEffects(effects)
             .build()
 
+        val editedMediaItemSequence = EditedMediaItemSequence(editedMediaItem)
+        val composition = Composition.Builder(editedMediaItemSequence).build()
+
         val listener = object : Transformer.Listener {
-            override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-                super.onCompleted(composition, exportResult)
-                stopProgressTracking() // Hentikan pemantauan progres
+            override fun onCompleted(composition: Composition, result: ExportResult) {
                 completionCallback(Result.success(destPath))
                 releaseThread()
             }
-
             override fun onError(
                 composition: Composition,
-                exportResult: ExportResult,
-                exportException: ExportException
+                result: ExportResult,
+                exception: ExportException
             ) {
-                 android.util.Log.e("VideoProcessor", "Export error: ${exportException.message}", exportException)
-                super.onError(composition, exportResult, exportException)
-                stopProgressTracking() // Hentikan pemantauan progres
-                completionCallback(Result.failure(exportException))
-                releaseThread()
-            }
-
-            override fun onFallbackApplied(
-                composition: Composition,
-                originalTransformationRequest: TransformationRequest,
-                fallbackTransformationRequest: TransformationRequest
-            ) {
-                super.onFallbackApplied(
-                    composition,
-                    originalTransformationRequest,
-                    fallbackTransformationRequest
-                )
-                // Fallback biasanya tidak memerlukan penanganan progres khusus,
-                // tapi pastikan untuk menghentikan jika perlu dan merilis thread.
-                stopProgressTracking()
+                completionCallback(Result.failure(exception))
                 releaseThread()
             }
         }
 
-        val encoderFactory = DefaultEncoderFactory.Builder(context)
+        val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
             .setEnableFallback(true)
             .build()
 
-        // Menggunakan buildAsync memerlukan penanganan ListenableFuture atau coroutine
-        // Untuk kesederhanaan, kita akan tetap menggunakan build() di thread terpisah
-        // dan memantau progres secara manual.
+        val transformer = Transformer.Builder(context.applicationContext)
+            .setEncoderFactory(encoderFactory)
+            .setLooper(handlerThread!!.looper)
+            .addListener(listener)
+            .build()
 
-        // Membuat Transformer di dalam HandlerThread
-        Handler(looper).post {
-            try {
-                val currentTransformer = Transformer.Builder(context)
-                    .setEncoderFactory(encoderFactory)
-                    .setLooper(looper) // Gunakan looper dari HandlerThread
-                    .setVideoMimeType(MimeTypes.VIDEO_H264)
-                    .addListener(listener)
-                    .build() // Tetap menggunakan build di sini karena kita sudah di thread yang benar
+        this.transformer = transformer
+        File(destPath).delete()
+        transformer.start(composition, destPath)
 
-                this.transformer = currentTransformer
-                File(destPath).delete() // Hapus file tujuan jika sudah ada
-                currentTransformer.start(editedMediaItem, destPath)
-
-                // Mulai memantau progres setelah start dipanggil
-                startProgressTracking(currentTransformer, progressCallback)
-
-            } catch (e: Exception) {
-                // Tangani error pembuatan Transformer di sini
-                completionCallback(Result.failure(ExportException.createForUnexpected(e)))
-                releaseThread()
-            }
-        }
-    }
-
-    private fun startProgressTracking(transformer: Transformer, progressCallback: (Int) -> Unit) {
+        // Progress polling
+        progressHandler = Handler(handlerThread!!.looper)
         val progressHolder = ProgressHolder()
-        progressRunnable = object : Runnable {
+        val pollRunnable = object : Runnable {
             override fun run() {
-                when (transformer.getProgress(progressHolder)) {
-                    Transformer.PROGRESS_STATE_AVAILABLE -> {
-                        // progressHolder.progress adalah nilai antara 0 dan 100
-                        progressCallback(progressHolder.progress)
-                    }
-                    Transformer.PROGRESS_STATE_UNAVAILABLE -> {
-                        // Progres belum tersedia, mungkin coba lagi nanti atau tunggu
-                    }
-                    Transformer.PROGRESS_STATE_NOT_STARTED -> {
-                        // Tidak ada transformasi yang sedang berjalan
-                        // Mungkin sudah selesai atau error, hentikan pemantauan
-                        stopProgressTracking()
-                        return
-                    }
+                transformer.getProgress(progressHolder)
+                Handler(context.mainLooper).post {
+                    progressCallback(progressHolder.progress)
                 }
-                // Jadwalkan pengecekan progres berikutnya
-                if (this@VideoProcessor.transformer != null) { // Pastikan transformer masih ada
-                    progressHandler.postDelayed(this, 100) // Cek setiap 100ms
+                if (progressHolder.progress < 100) {
+                    progressHandler?.postDelayed(this, 500)
                 }
             }
         }
-        // Jalankan pengecekan progres pertama kali
-        progressHandler.post(progressRunnable!!)
-    }
-
-    private fun stopProgressTracking() {
-        progressRunnable?.let {
-            progressHandler.removeCallbacks(it)
-        }
-        progressRunnable = null
-    }
-
-
-    fun trimVideoOnly(
-        context: Context,
-        sourcePath: String,
-        destPath: String,
-        startTimeMs: Long,
-        endTimeMs: Long,
-        progressCallback: (Int) -> Unit,
-        completionCallback: (Result<String>) -> Unit
-    ) {
-        cancel() // Pastikan operasi sebelumnya dibatalkan
-
-        handlerThread = HandlerThread("VideoProcessorTrimThread")
-        handlerThread?.start()
-        val looper = handlerThread!!.looper // Dapatkan looper dari thread
-
-        val mediaItem = MediaItem.Builder()
-            .setUri(sourcePath)
-            .setClippingConfiguration(
-                MediaItem.ClippingConfiguration.Builder()
-                    .setStartPositionMs(startTimeMs)
-                    .setEndPositionMs(endTimeMs)
-                    .build()
-            )
-            .build()
-
-        val editedMediaItem = EditedMediaItem.Builder(mediaItem).build()
-
-        val listener = object : Transformer.Listener {
-            override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-                super.onCompleted(composition, exportResult)
-                stopProgressTracking() // Hentikan pemantauan progres
-                completionCallback(Result.success(destPath))
-                releaseThread()
-            }
-
-            override fun onError(
-                composition: Composition,
-                exportResult: ExportResult,
-                exportException: ExportException
-            ) {
-                super.onError(composition, exportResult, exportException)
-                stopProgressTracking() // Hentikan pemantauan progres
-                completionCallback(Result.failure(exportException))
-                releaseThread()
-            }
-
-            override fun onFallbackApplied(
-                composition: Composition,
-                originalTransformationRequest: TransformationRequest,
-                fallbackTransformationRequest: TransformationRequest
-            ) {
-                super.onFallbackApplied(
-                    composition,
-                    originalTransformationRequest,
-                    fallbackTransformationRequest
-                )
-                stopProgressTracking()
-                releaseThread()
-            }
-        }
-
-        val encoderFactory = DefaultEncoderFactory.Builder(context)
-            .setEnableFallback(true)
-            .build()
-
-        // Membuat Transformer di dalam HandlerThread
-        Handler(looper).post {
-            try {
-                val currentTransformer = Transformer.Builder(context)
-                    .setEncoderFactory(encoderFactory)
-                    .setLooper(looper) // Gunakan looper dari HandlerThread
-                    .setVideoMimeType(MimeTypes.VIDEO_H264)
-                    .addListener(listener)
-                    .build() // Tetap menggunakan build di sini
-
-                this.transformer = currentTransformer
-                File(destPath).delete() // Hapus file tujuan jika sudah ada
-                currentTransformer.start(editedMediaItem, destPath)
-
-                // Mulai memantau progres setelah start dipanggil
-                startProgressTracking(currentTransformer, progressCallback)
-            } catch (e: Exception) {
-                completionCallback(Result.failure(ExportException.createForUnexpected(e)))
-                releaseThread()
-            }
-        }
+        progressHandler?.post(pollRunnable)
     }
 
     fun cancel() {
-        transformer?.cancel()
-        stopProgressTracking() // Pastikan pemantauan progres dihentikan saat pembatalan
-        releaseThread()
+        runOnProcessorThread {
+            transformer?.cancel()
+            releaseThread()
+        }
     }
 
     private fun releaseThread() {
         handlerThread?.quitSafely()
         handlerThread = null
-        // Tidak perlu null-kan transformer di sini karena bisa jadi masih ada callback listener yang berjalan
-        // Biarkan listener yang menangani null-kan transformer atau operasi berikutnya akan melakukannya
+        progressHandler = null
+    }
+
+    private fun runOnProcessorThread(action: () -> Unit) {
+        handlerThread?.let {
+            Handler(it.looper).post { action() }
+        } ?: action()
     }
 }
