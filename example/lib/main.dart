@@ -180,7 +180,7 @@ class _VideoProcessorPageState extends State<VideoProcessorPage> {
                         : () => _runProcess(
                           (path) => VideoCompressNative.compressAndTrim(
                             path: path,
-                            startTime: 2.0,
+                            startTime: 0.0,
                             endTime: 7.0,
                             resolutionHeight: 480,
                           ),
@@ -195,7 +195,7 @@ class _VideoProcessorPageState extends State<VideoProcessorPage> {
                         : () => _runProcess(
                           (path) => VideoCompressNative.trimVideo(
                             path: path,
-                            startTime: 1.0,
+                            startTime: 0.0,
                             endTime: 5.0,
                           ),
                         ),

@@ -1,5 +1,6 @@
 package com.hudhodev.video_compress_native
 import android.content.Context
+import android.media.MediaMetadataRetriever
 import android.os.Handler
 import android.os.HandlerThread
 import androidx.annotation.OptIn
@@ -35,6 +36,19 @@ class VideoProcessor {
         return "$destDir/VID_${timeStamp}_$uuid.$ext"
     }
 
+    private fun getVideoDurationMs(path: String): Long {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(path)
+            val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+            durationStr?.toLongOrNull() ?: 0L
+        } catch (e: Exception) {
+            0L
+        } finally {
+            retriever.release()
+        }
+    }
+
     fun processVideo(
         context: Context,
         sourcePath: String,
@@ -50,12 +64,16 @@ class VideoProcessor {
         handlerThread?.start()
 
         runOnProcessorThread {
+            val videoDurationMs = getVideoDurationMs(sourcePath)
+            val safeStart = startTimeMs.coerceAtLeast(0L).coerceAtMost(videoDurationMs)
+            val safeEnd = endTimeMs.coerceAtLeast(safeStart).coerceAtMost(videoDurationMs)
+
             val mediaItem = MediaItem.Builder()
                 .setUri(sourcePath)
                 .setClippingConfiguration(
                     MediaItem.ClippingConfiguration.Builder()
-                        .setStartPositionMs(startTimeMs)
-                        .setEndPositionMs(endTimeMs)
+                        .setStartPositionMs(safeStart)
+                        .setEndPositionMs(safeEnd)
                         .build()
                 )
                 .build()
@@ -134,12 +152,23 @@ class VideoProcessor {
         handlerThread?.start()
 
         runOnProcessorThread {
+            val videoDurationMs = getVideoDurationMs(sourcePath)
+            val safeStart = startTimeMs.coerceAtLeast(0L).coerceAtMost(videoDurationMs)
+            val safeEnd = endTimeMs.coerceAtLeast(safeStart).coerceAtMost(videoDurationMs)
+
+            // Tambahkan pengecekan ini:
+            if (safeEnd - safeStart < 1000L) { // minimal 1 detik
+                completionCallback(Result.failure(Exception("Durasi trim terlalu pendek atau tidak valid")))
+                releaseThread()
+                return@runOnProcessorThread
+            }
+
             val mediaItem = MediaItem.Builder()
                 .setUri(sourcePath)
                 .setClippingConfiguration(
                     MediaItem.ClippingConfiguration.Builder()
-                        .setStartPositionMs(startTimeMs)
-                        .setEndPositionMs(endTimeMs)
+                        .setStartPositionMs(safeStart)
+                        .setEndPositionMs(safeEnd)
                         .build()
                 )
                 .build()
@@ -205,8 +234,14 @@ class VideoProcessor {
     }
 
     fun cancel() {
-        runOnProcessorThread {
-            transformer?.cancel()
+        val thread = handlerThread
+        if (thread != null && thread.isAlive) {
+            Handler(thread.looper).post {
+                transformer?.cancel()
+                releaseThread()
+            }
+        } else {
+            // Tidak ada proses yang berjalan, cukup release
             releaseThread()
         }
     }
