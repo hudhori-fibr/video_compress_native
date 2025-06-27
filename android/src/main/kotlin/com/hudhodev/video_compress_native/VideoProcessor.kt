@@ -4,6 +4,7 @@ import android.media.MediaMetadataRetriever
 import android.os.Handler
 import android.os.HandlerThread
 import androidx.annotation.OptIn
+import androidx.media3.common.C;
 import androidx.media3.common.Effect
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
@@ -16,6 +17,7 @@ import androidx.media3.transformer.EditedMediaItemSequence
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
 import androidx.media3.transformer.Effects
+import androidx.media3.transformer.VideoEncoderSettings;
 import java.io.File
 import java.util.UUID
 import java.text.SimpleDateFormat
@@ -105,9 +107,16 @@ class VideoProcessor {
                     releaseThread()
                 }
             }
+            
+            
+            val videoEncoderSettings = VideoEncoderSettings.DEFAULT
+                .buildUpon()
+                .setRepeatPreviousFrameIntervalUs(C.MICROS_PER_SECOND / 30)  
+                .build()
 
             val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
                 .setEnableFallback(true)
+                .setRequestedVideoEncoderSettings(videoEncoderSettings)
                 .build()
 
             val transformer = Transformer.Builder(context.applicationContext)
@@ -201,8 +210,14 @@ class VideoProcessor {
                 }
             }
 
+            val videoEncoderSettings = VideoEncoderSettings.DEFAULT
+                .buildUpon()
+                .setRepeatPreviousFrameIntervalUs(C.MICROS_PER_SECOND / 30) 
+                .build()
+
             val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
                 .setEnableFallback(true)
+                .setRequestedVideoEncoderSettings(videoEncoderSettings)
                 .build()
 
             val transformer = Transformer.Builder(context.applicationContext)
