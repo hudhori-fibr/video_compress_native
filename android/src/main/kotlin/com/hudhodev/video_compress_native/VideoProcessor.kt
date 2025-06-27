@@ -133,73 +133,75 @@ class VideoProcessor {
         handlerThread = HandlerThread("VideoProcessorTrimThread")
         handlerThread?.start()
 
-        val mediaItem = MediaItem.Builder()
-            .setUri(sourcePath)
-            .setClippingConfiguration(
-                MediaItem.ClippingConfiguration.Builder()
-                    .setStartPositionMs(startTimeMs)
-                    .setEndPositionMs(endTimeMs)
-                    .build()
-            )
-            .build()
+        runOnProcessorThread {
+            val mediaItem = MediaItem.Builder()
+                .setUri(sourcePath)
+                .setClippingConfiguration(
+                    MediaItem.ClippingConfiguration.Builder()
+                        .setStartPositionMs(startTimeMs)
+                        .setEndPositionMs(endTimeMs)
+                        .build()
+                )
+                .build()
 
-        val videoEffects = mutableListOf<Effect>()
-        videoEffects.add(LanczosResample.scaleToFit(10000, 480))
-        videoEffects.add(Presentation.createForHeight(480))
+            val videoEffects = mutableListOf<Effect>()
+            videoEffects.add(LanczosResample.scaleToFit(10000, 480))
+            videoEffects.add(Presentation.createForHeight(480))
 
-        val effects = Effects(listOf(), videoEffects)
+            val effects = Effects(listOf(), videoEffects)
 
-        val editedMediaItem = EditedMediaItem.Builder(mediaItem)
-            .setEffects(effects)
-            .build()
+            val editedMediaItem = EditedMediaItem.Builder(mediaItem)
+                .setEffects(effects)
+                .build()
 
-        val editedMediaItemSequence = EditedMediaItemSequence(editedMediaItem)
-        val composition = Composition.Builder(editedMediaItemSequence).build()
+            val editedMediaItemSequence = EditedMediaItemSequence(editedMediaItem)
+            val composition = Composition.Builder(editedMediaItemSequence).build()
 
-        val listener = object : Transformer.Listener {
-            override fun onCompleted(composition: Composition, result: ExportResult) {
-                completionCallback(Result.success(destPath))
-                releaseThread()
-            }
-            override fun onError(
-                composition: Composition,
-                result: ExportResult,
-                exception: ExportException
-            ) {
-                completionCallback(Result.failure(exception))
-                releaseThread()
-            }
-        }
-
-        val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
-            .setEnableFallback(true)
-            .build()
-
-        val transformer = Transformer.Builder(context.applicationContext)
-            .setEncoderFactory(encoderFactory)
-            .setLooper(handlerThread!!.looper)
-            .addListener(listener)
-            .build()
-
-        this.transformer = transformer
-        File(destPath).delete()
-        transformer.start(composition, destPath)
-
-        // Progress polling
-        progressHandler = Handler(handlerThread!!.looper)
-        val progressHolder = ProgressHolder()
-        val pollRunnable = object : Runnable {
-            override fun run() {
-                transformer.getProgress(progressHolder)
-                Handler(context.mainLooper).post {
-                    progressCallback(progressHolder.progress)
+            val listener = object : Transformer.Listener {
+                override fun onCompleted(composition: Composition, result: ExportResult) {
+                    completionCallback(Result.success(destPath))
+                    releaseThread()
                 }
-                if (progressHolder.progress < 100) {
-                    progressHandler?.postDelayed(this, 500)
+                override fun onError(
+                    composition: Composition,
+                    result: ExportResult,
+                    exception: ExportException
+                ) {
+                    completionCallback(Result.failure(exception))
+                    releaseThread()
                 }
             }
+
+            val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
+                .setEnableFallback(true)
+                .build()
+
+            val transformer = Transformer.Builder(context.applicationContext)
+                .setEncoderFactory(encoderFactory)
+                .setLooper(handlerThread!!.looper)
+                .addListener(listener)
+                .build()
+
+            this.transformer = transformer
+            File(destPath).delete()
+            transformer.start(composition, destPath)
+
+            // Progress polling
+            progressHandler = Handler(handlerThread!!.looper)
+            val progressHolder = ProgressHolder()
+            val pollRunnable = object : Runnable {
+                override fun run() {
+                    transformer.getProgress(progressHolder)
+                    Handler(context.mainLooper).post {
+                        progressCallback(progressHolder.progress)
+                    }
+                    if (progressHolder.progress < 100) {
+                        progressHandler?.postDelayed(this, 500)
+                    }
+                }
+            }
+            progressHandler?.post(pollRunnable)
         }
-        progressHandler?.post(pollRunnable)
     }
 
     fun cancel() {
