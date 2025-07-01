@@ -149,9 +149,19 @@ class _VideoProcessorPageState extends State<VideoProcessorPage> {
 
     try {
       final output = await processFunction(path);
+      int? fileSize;
+      if (output != null) {
+        final file = File(output);
+        if (await file.exists()) {
+          fileSize = await file.length();
+        }
+      }
       if (mounted) {
         setState(() {
-          _status = 'Selesai!';
+          _status =
+              fileSize != null
+                  ? 'Selesai!\nUkuran file: ${(fileSize / (1024 * 1024)).toStringAsFixed(2)} MB'
+                  : 'Selesai!';
           _outputPath = output;
           _progress = 1.0;
         });
