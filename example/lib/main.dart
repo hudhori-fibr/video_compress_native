@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:video_compress_native/video_compress_native.dart';
+import 'package:open_file/open_file.dart';
 
 void main() {
   runApp(const MyApp());
@@ -195,7 +196,7 @@ class _VideoProcessorPageState extends State<VideoProcessorPage> {
                             resolutionHeight: 720,
                           ),
                         ),
-                child: const Text('Kompresi, Trim & Resize 480p'),
+                child: const Text('Kompresi, Trim & Resize 720p'),
               ),
               const SizedBox(height: 12),
               ElevatedButton(
@@ -236,6 +237,14 @@ class _VideoProcessorPageState extends State<VideoProcessorPage> {
                           _outputPath!,
                           textAlign: TextAlign.center,
                           style: const TextStyle(fontSize: 12),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.play_arrow),
+                          label: const Text('Buka Video'),
+                          onPressed: () {
+                            OpenFile.open(_outputPath!);
+                          },
                         ),
                       ],
                     ),
