@@ -84,14 +84,17 @@ private func processVideo(path: String, startTime: Double, endTime: Double, targ
             let actualHeight = abs(transformedSize.height)
             let aspectRatio = actualWidth / actualHeight
 
+            // Tambahkan baris ini:
+            let minHeight = min(CGFloat(targetHeight), actualHeight)
+
             var outputWidth: CGFloat
             var outputHeight: CGFloat
 
             if actualWidth > actualHeight {
-                outputHeight = CGFloat(targetHeight)
+                outputHeight = minHeight
                 outputWidth = outputHeight * aspectRatio
             } else {
-                outputWidth = CGFloat(targetHeight)
+                outputWidth = minHeight
                 outputHeight = outputWidth / aspectRatio
             }
 
