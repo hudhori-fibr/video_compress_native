@@ -81,8 +81,17 @@ class VideoProcessor {
                 .build()
 
             val videoEffects = mutableListOf<Effect>()
-            videoEffects.add(LanczosResample.scaleToFit(10000, targetHeight))
-            videoEffects.add(Presentation.createForHeight(targetHeight))
+
+            // Ambil tinggi asli video dari metadata
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(sourcePath)
+            val actualHeightFromMetadata = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: targetHeight
+            retriever.release()
+
+            val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
+
+            videoEffects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
+            videoEffects.add(Presentation.createForHeight(finalTargetHeight))
 
             val effects = Effects(listOf(), videoEffects)
 
