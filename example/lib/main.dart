@@ -182,7 +182,7 @@ class _VideoProcessorPageState extends State<VideoProcessorPage> {
                             path: path,
                             startTime: 0.0,
                             endTime: 90.0,
-                            resolutionHeight: 480,
+                            resolutionHeight: 720,
                           ),
                         ),
                 child: const Text('Kompresi, Trim & Resize 480p'),
