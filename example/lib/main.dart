@@ -181,7 +181,7 @@ class _VideoProcessorPageState extends State<VideoProcessorPage> {
                           (path) => VideoCompressNative.compressAndTrim(
                             path: path,
                             startTime: 0.0,
-                            endTime: 7.0,
+                            endTime: 90.0,
                             resolutionHeight: 480,
                           ),
                         ),
@@ -196,7 +196,7 @@ class _VideoProcessorPageState extends State<VideoProcessorPage> {
                           (path) => VideoCompressNative.trimVideo(
                             path: path,
                             startTime: 0.0,
-                            endTime: 5.0,
+                            endTime: 90.0,
                           ),
                         ),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
