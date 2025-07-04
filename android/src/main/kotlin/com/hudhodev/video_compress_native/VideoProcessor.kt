@@ -51,6 +51,21 @@ class VideoProcessor {
         }
     }
 
+    // Tambahkan fungsi untuk cek audio encoding didukung
+    private fun isAudioSupported(path: String): Boolean {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(path)
+            val audioCodec = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_MIMETYPE)
+            // Contoh: hanya dukung AAC dan MP3
+            audioCodec == "audio/mp4a-latm" || audioCodec == "audio/mpeg"
+        } catch (e: Exception) {
+            false
+        } finally {
+            retriever.release()
+        }
+    }
+
     fun processVideo(
         context: Context,
         sourcePath: String,
@@ -93,7 +108,11 @@ class VideoProcessor {
             videoEffects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
             videoEffects.add(Presentation.createForHeight(finalTargetHeight))
 
-            val effects = Effects(listOf(), videoEffects)
+            val audioSupported = isAudioSupported(sourcePath)
+            val effects = Effects(
+                if (audioSupported) listOf() else emptyList(), // Audio tetap jika didukung, hilang jika tidak
+                videoEffects
+            )
 
             val editedMediaItem = EditedMediaItem.Builder(mediaItem)
                 .setEffects(effects)
