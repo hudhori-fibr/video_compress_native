@@ -267,18 +267,18 @@ class VideoProcessor {
             Log.d("VideoProcessor", "finalTargetHeight: $finalTargetHeight")
 
             val videoEffects = mutableListOf<Effect>()
-            if (rotation != 0 || ((actualWidthFromMetadata < actualHeightFromMetadata) && rotation == 0)) {
-                Log.d("VideoProcessor", "Menambah efek rotasi: $rotation derajat")
-                Log.d("VideoProcessor", "actualWidthFromMetadata: $actualWidthFromMetadata actualHeightFromMetadata: $actualHeightFromMetadata")
-
-                videoEffects.add(
-                    ScaleAndRotateTransformation.Builder()
-                        .setRotationDegrees(((if (rotation != 0) rotation else 90).toFloat()))
-                        .build()
-                )
-            } else {
-                Log.d("VideoProcessor", "Tidak menambah efek rotasi (rotation == 0)")
-            }
+            val needsRotation = rotation != 0 || (rotation == 0 && actualWidthFromMetadata > 0 && actualWidthFromMetadata < actualHeightFromMetadata)
+        if (needsRotation) {
+            val rotationDegrees = if (rotation != 0) rotation.toFloat() else 90f
+            Log.d("VideoProcessor", "Menambah efek rotasi eksplisit: $rotationDegrees derajat")
+            videoEffects.add(
+                ScaleAndRotateTransformation.Builder()
+                    .setRotationDegrees(rotationDegrees)
+                    .build()
+            )
+        } else {
+            Log.d("VideoProcessor", "Tidak perlu rotasi eksplisit.")
+        }
             videoEffects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
             videoEffects.add(Presentation.createForHeight(finalTargetHeight))
             Log.d("VideoProcessor", "videoEffects: $videoEffects")
