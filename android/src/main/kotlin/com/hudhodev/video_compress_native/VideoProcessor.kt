@@ -59,7 +59,7 @@ class VideoProcessor {
         rotation: Int,
         targetHeight: Int
     ): List<Effect> {
-        val effects = mutableListOf<Effect>()
+        val videoEffects = mutableListOf<Effect>()
 val finalOutputHeight = minOf(targetHeight, actualHeight)
 
 val aspectRatio = if (actualHeight > 0) {
@@ -74,7 +74,7 @@ Log.d("VideoProcessor", "Final target resolution: ${finalOutputWidth}x$finalOutp
 videoEffects.add(LanczosResample.scaleToFit(finalOutputWidth, finalOutputHeight))
 
 Log.d("VideoProcessor", "videoEffects: $videoEffects")
-        return effects
+        return videoEffects
     }
 
     // Tambahkan fungsi untuk cek audio encoding didukung
