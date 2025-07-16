@@ -69,11 +69,16 @@ class VideoProcessor {
             1.0f
         }
         val finalOutputWidth = (finalOutputHeight * aspectRatio).toInt()
-
+        Log.d("VideoProcessor", "Actual size: ${actualWidth}x$actualHeight")
         Log.d("VideoProcessor", "Final target resolution: ${finalOutputWidth}x$finalOutputHeight")
-
+        Log.d("VideoProcessor", "Rotation: $rotation")
+        Log.d("VideoProcessor", "Aspect ratio: $aspectRatio")
         effects.add(LanczosResample.scaleToFit(finalOutputWidth, finalOutputHeight))
-        effects.add(Presentation.createForAspectRatio(aspectRatio, rotation))
+        if (rotation == 0 && aspectRatio < 1) {
+            effects.add(Presentation.createForHeight(finalOutputWidth))
+        } else {
+            effects.add(Presentation.createForHeight(finalOutputHeight))
+        }
         Log.d("VideoProcessor", "videoEffects: $effects")
         return effects
     }
