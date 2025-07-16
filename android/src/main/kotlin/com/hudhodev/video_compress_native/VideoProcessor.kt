@@ -60,25 +60,20 @@ class VideoProcessor {
         targetHeight: Int
     ): List<Effect> {
         val effects = mutableListOf<Effect>()
-        val isPortrait = actualWidth > 0 && actualWidth < actualHeight
-        val needsRotation = rotation != 0 || (rotation == 0 && isPortrait)
-        val finalTargetHeight = minOf(targetHeight, actualHeight)
+val finalOutputHeight = minOf(targetHeight, actualHeightFromMetadata)
 
-        Log.d("VideoProcessor", "Final Target Dimension: $finalTargetHeight")
+val aspectRatio = if (actualHeightFromMetadata > 0) {
+    actualWidthFromMetadata.toFloat() / actualHeightFromMetadata.toFloat()
+} else {
+    1.0f
+}
+val finalOutputWidth = (finalOutputHeight * aspectRatio).toInt()
 
-        if (needsRotation) {
-            Log.d("VideoProcessor", "Mode Potret: Menambah rotasi dan membalik logika scaleToFit.")
-            val rotationDegrees = if (rotation != 0) rotation.toFloat() else 90f
-            effects.add(
-                ScaleAndRotateTransformation.Builder()
-                    .setRotationDegrees(rotationDegrees)
-                    .build()
-            )
-            effects.add(LanczosResample.scaleToFit(finalTargetHeight, 10000))
-        } else {
-            Log.d("VideoProcessor", "Mode Landscape: Menggunakan logika scaleToFit standar.")
-            effects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
-        }
+Log.d("VideoProcessor", "Final target resolution: ${finalOutputWidth}x$finalOutputHeight")
+
+videoEffects.add(LanczosResample.scaleToFit(finalOutputWidth, finalOutputHeight))
+
+Log.d("VideoProcessor", "videoEffects: $videoEffects")
         return effects
     }
 
