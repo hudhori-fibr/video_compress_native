@@ -119,8 +119,25 @@ class VideoProcessor {
             Log.d("VideoProcessor", "finalTargetHeight: $finalTargetHeight")
 
             val videoEffects = mutableListOf<Effect>()
-            val needsRotation = rotation != 0 || (rotation == 0 && actualWidthFromMetadata > 0 && actualWidthFromMetadata < actualHeightFromMetadata)
-            if (needsRotation) {
+
+        // Tentukan apakah video perlu diputar secara manual
+        val isPortrait = actualWidthFromMetadata > 0 && actualWidthFromMetadata < actualHeightFromMetadata
+        val needsRotation = rotation != 0 || (rotation == 0 && isPortrait)
+
+        // Hitung dimensi target dengan menjaga aspek rasio
+        val originalAspectRatio = if (actualHeightFromMetadata > 0) {
+            actualWidthFromMetadata.toFloat() / actualHeightFromMetadata.toFloat()
+        } else {
+            1.0f
+        }
+        
+        val finalTargetHeight = minOf(targetHeight, if(isPortrait) actualHeightFromMetadata else actualWidthFromMetadata)
+        val targetWidth = (finalTargetHeight * originalAspectRatio).toInt()
+        
+        Log.d("VideoProcessor", "finalTargetHeight: $finalTargetHeight")
+        Log.d("VideoProcessor", "Calculated targetWidth: $targetWidth")
+
+        if (needsRotation) {
             val rotationDegrees = if (rotation != 0) rotation.toFloat() else 90f
             Log.d("VideoProcessor", "Menambah efek rotasi eksplisit: $rotationDegrees derajat")
             videoEffects.add(
@@ -128,13 +145,15 @@ class VideoProcessor {
                     .setRotationDegrees(rotationDegrees)
                     .build()
             )
+            // Setelah rotasi, kita atur resolusi akhir ke potret (lebar < tinggi)
+            videoEffects.add(Presentation.setResolution(targetWidth, finalTargetHeight))
         } else {
-            Log.d("VideoProcessor", "Tidak perlu rotasi eksplisit.")
+            // Jika video sudah landscape, kita atur resolusi akhir ke landscape (lebar > tinggi)
+            videoEffects.add(Presentation.setResolution(finalTargetHeight, targetWidth))
         }
-            videoEffects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
-            videoEffects.add(Presentation.createForHeight(finalTargetHeight))
-            Log.d("VideoProcessor", "videoEffects: $videoEffects")
 
+        Log.d("VideoProcessor", "videoEffects: $videoEffects")
+        
             val audioSupported = isAudioSupported(sourcePath)
             Log.d("VideoProcessor", "audioSupported: $audioSupported")
 
@@ -269,8 +288,25 @@ class VideoProcessor {
             val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
             Log.d("VideoProcessor", "finalTargetHeight: $finalTargetHeight")
 
-            val videoEffects = mutableListOf<Effect>()
-            val needsRotation = rotation != 0 || (rotation == 0 && actualWidthFromMetadata > 0 && actualWidthFromMetadata < actualHeightFromMetadata)
+                   val videoEffects = mutableListOf<Effect>()
+
+        // Tentukan apakah video perlu diputar secara manual
+        val isPortrait = actualWidthFromMetadata > 0 && actualWidthFromMetadata < actualHeightFromMetadata
+        val needsRotation = rotation != 0 || (rotation == 0 && isPortrait)
+
+        // Hitung dimensi target dengan menjaga aspek rasio
+        val originalAspectRatio = if (actualHeightFromMetadata > 0) {
+            actualWidthFromMetadata.toFloat() / actualHeightFromMetadata.toFloat()
+        } else {
+            1.0f
+        }
+        
+        val finalTargetHeight = minOf(targetHeight, if(isPortrait) actualHeightFromMetadata else actualWidthFromMetadata)
+        val targetWidth = (finalTargetHeight * originalAspectRatio).toInt()
+        
+        Log.d("VideoProcessor", "finalTargetHeight: $finalTargetHeight")
+        Log.d("VideoProcessor", "Calculated targetWidth: $targetWidth")
+
         if (needsRotation) {
             val rotationDegrees = if (rotation != 0) rotation.toFloat() else 90f
             Log.d("VideoProcessor", "Menambah efek rotasi eksplisit: $rotationDegrees derajat")
@@ -279,12 +315,14 @@ class VideoProcessor {
                     .setRotationDegrees(rotationDegrees)
                     .build()
             )
+            // Setelah rotasi, kita atur resolusi akhir ke potret (lebar < tinggi)
+            videoEffects.add(Presentation.setResolution(targetWidth, finalTargetHeight))
         } else {
-            Log.d("VideoProcessor", "Tidak perlu rotasi eksplisit.")
+            // Jika video sudah landscape, kita atur resolusi akhir ke landscape (lebar > tinggi)
+            videoEffects.add(Presentation.setResolution(finalTargetHeight, targetWidth))
         }
-            videoEffects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
-            videoEffects.add(Presentation.createForHeight(finalTargetHeight))
-            Log.d("VideoProcessor", "videoEffects: $videoEffects")
+
+        Log.d("VideoProcessor", "videoEffects: $videoEffects")
 
             val effects = Effects(listOf(), videoEffects)
 
