@@ -75,9 +75,9 @@ class VideoProcessor {
         Log.d("VideoProcessor", "Aspect ratio: $aspectRatio")
         effects.add(LanczosResample.scaleToFit(finalOutputWidth, finalOutputHeight))
         if (rotation == 0 && aspectRatio < 1) {
-            effects.add(Presentation.createForHeight(finalOutputWidth))
+            effects.add(Presentation.createForAspectRatio(1/aspectRatio, Presentation.LAYOUT_STRETCH_TO_FIT))
         } else {
-            effects.add(Presentation.createForHeight(finalOutputHeight))
+            effects.add(Presentation.createForAspectRatio(aspectRatio, Presentation.LAYOUT_STRETCH_TO_FIT))
         }
         Log.d("VideoProcessor", "videoEffects: $effects")
         return effects
