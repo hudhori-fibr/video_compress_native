@@ -10,7 +10,6 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.util.Log
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.LanczosResample
-import androidx.media3.effect.ScaleAndRotateTransformation
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultEncoderFactory
 import androidx.media3.transformer.EditedMediaItem
@@ -60,20 +59,20 @@ class VideoProcessor {
         targetHeight: Int
     ): List<Effect> {
         val videoEffects = mutableListOf<Effect>()
-val finalOutputHeight = minOf(targetHeight, actualHeight)
+        val finalOutputHeight = minOf(targetHeight, actualHeight)
 
-val aspectRatio = if (actualHeight > 0) {
-    actualWidth.toFloat() / actualHeight.toFloat()
-} else {
-    1.0f
-}
-val finalOutputWidth = (finalOutputHeight * aspectRatio).toInt()
+        val aspectRatio = if (actualHeight > 0) {
+            actualWidth.toFloat() / actualHeight.toFloat()
+        } else {
+            1.0f
+        }
+        val finalOutputWidth = (finalOutputHeight * aspectRatio).toInt()
 
-Log.d("VideoProcessor", "Final target resolution: ${finalOutputWidth}x$finalOutputHeight")
+        Log.d("VideoProcessor", "Final target resolution: ${finalOutputWidth}x$finalOutputHeight")
 
-videoEffects.add(LanczosResample.scaleToFit(finalOutputWidth, finalOutputHeight))
+        videoEffects.add(LanczosResample.scaleToFit(finalOutputWidth, finalOutputHeight))
 
-Log.d("VideoProcessor", "videoEffects: $videoEffects")
+        Log.d("VideoProcessor", "videoEffects: $videoEffects")
         return videoEffects
     }
 
