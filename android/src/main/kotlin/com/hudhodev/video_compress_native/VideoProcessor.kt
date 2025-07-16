@@ -159,6 +159,7 @@ class VideoProcessor {
 
             val editedMediaItem = EditedMediaItem.Builder(mediaItem)
                 .setEffects(effects)
+                .setFlattenForSlowMotion(true)
                 .build()
 
             val editedMediaItemSequence = EditedMediaItemSequence(editedMediaItem)
@@ -302,6 +303,7 @@ class VideoProcessor {
 
             val editedMediaItem = EditedMediaItem.Builder(mediaItem)
                 .setEffects(effects)
+                .setFlattenForSlowMotion(true)
                 .build()
 
             val editedMediaItemSequence = EditedMediaItemSequence(editedMediaItem)
