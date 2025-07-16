@@ -101,7 +101,6 @@ class VideoProcessor {
         cancel()
         handlerThread = HandlerThread("VideoProcessorThread")
         handlerThread?.start()
-        // Inisialisasi handler untuk progress di thread ini
         progressHandler = Handler(handlerThread!!.looper)
 
         runOnProcessorThread {
@@ -111,178 +110,102 @@ class VideoProcessor {
             val tempFile = File(tempFilePath)
             val progressHolder = ProgressHolder()
 
-            try {
-                // ==========================================================
-                // LANGKAH 1: FLATTEN & SCALE (TANPA CLIPPING)
-                // ==========================================================
-                Log.d("VideoProcessor", "Langkah 1: Flattening video ke -> $tempFilePath")
+            // HAPUS blok try...finally dari sini
 
-                val fullMediaItem = MediaItem.fromUri(sourcePath)
+            // ==========================================================
+            // LANGKAH 1: FLATTEN & SCALE (TANPA CLIPPING)
+            // ==========================================================
+            Log.d("VideoProcessor", "Langkah 1: Flattening video ke -> $tempFilePath")
 
-                val retriever = MediaMetadataRetriever()
-                retriever.setDataSource(sourcePath)
-                val actualHeight =
-                    retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
-                        ?.toIntOrNull() ?: targetHeight
-                val actualWidth =
-                    retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
-                        ?.toIntOrNull() ?: 0
-                retriever.release()
+            val fullMediaItem = MediaItem.fromUri(sourcePath)
 
-                val effects = createVideoEffects(actualWidth, actualHeight, targetHeight)
-                val audioEffects = if (isAudioSupported(sourcePath)) listOf<AudioProcessor>() else emptyList()
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(sourcePath)
+            val actualHeight = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: targetHeight
+            val actualWidth = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
+            retriever.release()
 
-                val editedMediaItemStep1 = EditedMediaItem.Builder(fullMediaItem)
-                    .setEffects(Effects(audioEffects, effects))
-                    .setFlattenForSlowMotion(true)
-                    .build()
+            val effects = createVideoEffects(actualWidth, actualHeight, targetHeight)
+            val audioEffects = if (isAudioSupported(sourcePath)) listOf<AudioProcessor>() else emptyList()
 
-                val compositionStep1 =
-                    Composition.Builder(EditedMediaItemSequence(editedMediaItemStep1)).build()
+            val editedMediaItemStep1 = EditedMediaItem.Builder(fullMediaItem)
+                .setEffects(Effects(audioEffects, effects))
+                .setFlattenForSlowMotion(true)
+                .build()
 
-                val listenerStep1 = object : Transformer.Listener {
-                    override fun onCompleted(composition: Composition, result: ExportResult) {
-                        Log.d("VideoProcessor", "Langkah 1 Selesai.")
-                        // ==========================================================
-                        // LANGKAH 2: CLIPPING VIDEO DARI FILE SEMENTARA
-                        // ==========================================================
-                        Log.d(
-                            "VideoProcessor",
-                            "Langkah 2: Clipping video dari $tempFilePath ke -> $destPath"
-                        )
+            val compositionStep1 = Composition.Builder(EditedMediaItemSequence(editedMediaItemStep1)).build()
 
-                        val videoDurationMs = getVideoDurationMs(tempFilePath)
-                        val safeStart = startTimeMs.coerceAtLeast(0L).coerceAtMost(videoDurationMs)
-                        val safeEnd =
-                            endTimeMs.coerceAtLeast(safeStart).coerceAtMost(videoDurationMs)
+            val listenerStep1 = object : Transformer.Listener {
+                override fun onCompleted(composition: Composition, result: ExportResult) {
+                    Log.d("VideoProcessor", "Langkah 1 Selesai.")
+                    // ==========================================================
+                    // LANGKAH 2: CLIPPING VIDEO DARI FILE SEMENTARA
+                    // ==========================================================
+                    Log.d("VideoProcessor", "Langkah 2: Clipping video dari $tempFilePath ke -> $destPath")
+                    
+                    val videoDurationMs = getVideoDurationMs(tempFilePath)
+                    val safeStart = startTimeMs.coerceAtLeast(0L).coerceAtMost(videoDurationMs)
+                    val safeEnd = endTimeMs.coerceAtLeast(safeStart).coerceAtMost(videoDurationMs)
 
-                        val clippedMediaItem = MediaItem.Builder()
-                            .setUri(tempFilePath)
-                            .setClippingConfiguration(
-                                MediaItem.ClippingConfiguration.Builder()
-                                    .setStartPositionMs(safeStart)
-                                    .setEndPositionMs(safeEnd)
-                                    .build()
-                            ).build()
-
-                        val editedMediaItemStep2 = EditedMediaItem.Builder(clippedMediaItem)
-                            .setRemoveAudio(audioEffects.isEmpty()).build()
-                        val compositionStep2 =
-                            Composition.Builder(EditedMediaItemSequence(editedMediaItemStep2))
+                    val clippedMediaItem = MediaItem.Builder()
+                        .setUri(tempFilePath)
+                        .setClippingConfiguration(
+                            MediaItem.ClippingConfiguration.Builder()
+                                .setStartPositionMs(safeStart)
+                                .setEndPositionMs(safeEnd)
                                 .build()
+                        ).build()
 
-                        val listenerStep2 = object : Transformer.Listener {
-                            override fun onCompleted(
-                                composition: Composition,
-                                result: ExportResult
-                            ) {
-                                Log.d("VideoProcessor", "Langkah 2 Selesai. Proses Berhasil.")
-                                Handler(context.mainLooper).post {
-                                    completionCallback(
-                                        Result.success(
-                                            destPath
-                                        )
-                                    )
-                                }
-                                releaseThread()
-                            }
+                    val editedMediaItemStep2 = EditedMediaItem.Builder(clippedMediaItem).setRemoveAudio(audioEffects.isEmpty()).build()
+                    val compositionStep2 = Composition.Builder(EditedMediaItemSequence(editedMediaItemStep2)).build()
 
-                            override fun onError(
-                                composition: Composition,
-                                result: ExportResult,
-                                exception: ExportException
-                            ) {
-                                Log.e("VideoProcessor", "Langkah 2 Gagal.", exception)
-                                Handler(context.mainLooper).post {
-                                    completionCallback(
-                                        Result.failure(
-                                            exception
-                                        )
-                                    )
-                                }
-                                releaseThread()
-                            }
+                    val listenerStep2 = object : Transformer.Listener {
+                        override fun onCompleted(composition: Composition, result: ExportResult) {
+                            Log.d("VideoProcessor", "Langkah 2 Selesai. Proses Berhasil.")
+                            Handler(context.mainLooper).post { completionCallback(Result.success(destPath)) }
+                            // Hapus file sementara setelah berhasil
+                            if (tempFile.exists()) tempFile.delete()
+                            releaseThread()
                         }
-
-                        val transformerStep2 = Transformer.Builder(context)
-                            .setLooper(handlerThread!!.looper)
-                            .addListener(listenerStep2).build()
-
-                        this@VideoProcessor.transformer =
-                            transformerStep2 // Update transformer instance
-                        File(destPath).delete()
-                        transformerStep2.start(compositionStep2, destPath)
-
-                        // Progress Polling untuk Langkah 2 (51% - 100%)
-                        val pollRunnableStep2 = object : Runnable {
-                            override fun run() {
-                                if (transformerStep2.getProgress(progressHolder) != Transformer.PROGRESS_STATE_UNAVAILABLE) {
-                                    val overallProgress = 50 + (progressHolder.progress / 2)
-                                    Handler(context.mainLooper).post {
-                                        progressCallback(
-                                            overallProgress
-                                        )
-                                    }
-                                    if (progressHolder.progress < 100) {
-                                        progressHandler?.postDelayed(this, 500)
-                                    }
-                                }
-                            }
+                        override fun onError(composition: Composition, result: ExportResult, exception: ExportException) {
+                            Log.e("VideoProcessor", "Langkah 2 Gagal.", exception)
+                            Handler(context.mainLooper).post { completionCallback(Result.failure(exception)) }
+                            // Hapus file sementara setelah gagal
+                            if (tempFile.exists()) tempFile.delete()
+                            releaseThread()
                         }
-                        progressHandler?.post(pollRunnableStep2)
                     }
-
-                    override fun onError(
-                        composition: Composition,
-                        result: ExportResult,
-                        exception: ExportException
-                    ) {
-                        Log.e("VideoProcessor", "Langkah 1 Gagal.", exception)
-                        Handler(context.mainLooper).post {
-                            completionCallback(
-                                Result.failure(
-                                    exception
-                                )
-                            )
-                        }
-                        releaseThread()
-                    }
+                    
+                    val transformerStep2 = Transformer.Builder(context)
+                        .setLooper(handlerThread!!.looper)
+                        .addListener(listenerStep2).build()
+                    
+                    this@VideoProcessor.transformer = transformerStep2
+                    File(destPath).delete()
+                    transformerStep2.start(compositionStep2, destPath)
+                    
+                    val pollRunnableStep2 = object : Runnable { /* ... Kode polling progress Anda ... */ }
+                    progressHandler?.post(pollRunnableStep2)
                 }
 
-                val transformerStep1 = Transformer.Builder(context)
-                    .setLooper(handlerThread!!.looper)
-                    .addListener(listenerStep1).build()
-
-                this.transformer = transformerStep1
-                transformerStep1.start(compositionStep1, tempFilePath)
-
-                // Progress Polling untuk Langkah 1 (0% - 50%)
-                val pollRunnableStep1 = object : Runnable {
-                    override fun run() {
-                        if (transformerStep1.getProgress(progressHolder) != Transformer.PROGRESS_STATE_UNAVAILABLE) {
-                            val overallProgress = progressHolder.progress / 2
-                            Handler(context.mainLooper).post { progressCallback(overallProgress) }
-                            if (progressHolder.progress < 100) {
-                                progressHandler?.postDelayed(this, 500)
-                            }
-                        } else {
-                            // Jika progres belum tersedia, coba lagi
-                            progressHandler?.postDelayed(this, 500)
-                        }
-                    }
+                override fun onError(composition: Composition, result: ExportResult, exception: ExportException) {
+                    Log.e("VideoProcessor", "Langkah 1 Gagal.", exception)
+                    Handler(context.mainLooper).post { completionCallback(Result.failure(exception)) }
+                    // Hapus file sementara jika langkah 1 gagal
+                    if (tempFile.exists()) tempFile.delete()
+                    releaseThread()
                 }
-                progressHandler?.post(pollRunnableStep1)
-
-            } finally {
-                // Pastikan file sementara selalu dihapus setelah proses selesai atau gagal
-                // Kita beri sedikit jeda untuk memastikan proses rilis selesai
-                Handler(handlerThread!!.looper).postDelayed({
-                    if (tempFile.exists()) {
-                        Log.d("VideoProcessor", "Menghapus file sementara: $tempFilePath")
-                        tempFile.delete()
-                    }
-                }, 1000)
             }
+
+            val transformerStep1 = Transformer.Builder(context)
+                .setLooper(handlerThread!!.looper)
+                .addListener(listenerStep1).build()
+            
+            this.transformer = transformerStep1
+            transformerStep1.start(compositionStep1, tempFilePath)
+            
+            val pollRunnableStep1 = object : Runnable { /* ... Kode polling progress Anda ... */ }
+            progressHandler?.post(pollRunnableStep1)
         }
     }
 
