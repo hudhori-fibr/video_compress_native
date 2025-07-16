@@ -184,23 +184,21 @@ class VideoProcessor {
                     File(destPath).delete()
                     transformerStep2.start(compositionStep2, destPath)
                     
-                                            // Progress Polling untuk Langkah 2 (51% - 100%)
-                        val pollRunnableStep2 = object : Runnable {
-                            override fun run() {
-                                if (transformerStep2.getProgress(progressHolder) != Transformer.PROGRESS_STATE_UNAVAILABLE) {
-                                    val overallProgress = 50 + (progressHolder.progress / 2)
-                                    Handler(context.mainLooper).post {
-                                        progressCallback(
-                                            overallProgress
-                                        )
-                                    }
-                                    if (progressHolder.progress < 100) {
-                                        progressHandler?.postDelayed(this, 500)
-                                    }
+                    val pollRunnableStep2 = object : Runnable { 
+                        override fun run() {
+                            if (transformerStep2.getProgress(progressHolder) != Transformer.PROGRESS_STATE_UNAVAILABLE) {
+                                val overallProgress = 50 + (progressHolder.progress / 2)
+                                Handler(context.mainLooper).post {
+                                    progressCallback(
+                                        overallProgress
+                                    )
+                                }
+                                if (progressHolder.progress < 100) {
+                                    progressHandler?.postDelayed(this, 500)
                                 }
                             }
                         }
-
+                    }
                     progressHandler?.post(pollRunnableStep2)
                 }
 
