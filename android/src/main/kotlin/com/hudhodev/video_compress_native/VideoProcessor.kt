@@ -259,6 +259,7 @@ class VideoProcessor {
             val retriever = MediaMetadataRetriever()
             retriever.setDataSource(sourcePath)
             val actualHeightFromMetadata = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: targetHeight
+            val actualWidthFromMetadata = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
             val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
             retriever.release()
 
@@ -266,11 +267,11 @@ class VideoProcessor {
             Log.d("VideoProcessor", "finalTargetHeight: $finalTargetHeight")
 
             val videoEffects = mutableListOf<Effect>()
-            if (rotation != 0) {
-                Log.d("VideoProcessor", "Menambah efek rotasi: $rotation derajat")
+            if (rotation != 0 || ((actualWidthFromMetadata < actualHeightFromMetadata) && rotation == 0)) {
+                Log.d("VideoProcessor", "Menambah efek rotasi: $rotation derajat" , "actualWidthFromMetadata: $actualWidthFromMetadata, actualHeightFromMetadata: $actualHeightFromMetadata")
                 videoEffects.add(
                     ScaleAndRotateTransformation.Builder()
-                        .setRotationDegrees(rotation.toFloat())
+                        .setRotationDegrees(((if (rotation != 0) rotation else 90).toFloat()))
                         .build()
                 )
             } else {
