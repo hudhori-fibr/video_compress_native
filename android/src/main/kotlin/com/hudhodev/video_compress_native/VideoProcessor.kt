@@ -52,7 +52,6 @@ class VideoProcessor {
     private fun createVideoEffects(
         actualWidth: Int,
         actualHeight: Int,
-        rotation: Int,
         targetHeight: Int
     ): List<Effect> {
         val videoEffects = mutableListOf<Effect>()
