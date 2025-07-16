@@ -82,9 +82,18 @@ class VideoProcessor {
         handlerThread?.start()
 
         runOnProcessorThread {
+            Log.d("VideoProcessor", "=== Mulai proses video ===")
+            Log.d("VideoProcessor", "sourcePath: $sourcePath")
+            Log.d("VideoProcessor", "destPath: $destPath")
+            Log.d("VideoProcessor", "targetHeight: $targetHeight")
+            Log.d("VideoProcessor", "startTimeMs: $startTimeMs, endTimeMs: $endTimeMs")
+
             val videoDurationMs = getVideoDurationMs(sourcePath)
+            Log.d("VideoProcessor", "videoDurationMs: $videoDurationMs")
+
             val safeStart = startTimeMs.coerceAtLeast(0L).coerceAtMost(videoDurationMs)
             val safeEnd = endTimeMs.coerceAtLeast(safeStart).coerceAtMost(videoDurationMs)
+            Log.d("VideoProcessor", "safeStart: $safeStart, safeEnd: $safeEnd")
 
             val mediaItem = MediaItem.Builder()
                 .setUri(sourcePath)
@@ -96,26 +105,35 @@ class VideoProcessor {
                 )
                 .build()
 
-            // Ambil tinggi asli dan rotasi video dari metadata
             val retriever = MediaMetadataRetriever()
             retriever.setDataSource(sourcePath)
             val actualHeightFromMetadata = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: targetHeight
             val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
             retriever.release()
+            Log.d("VideoProcessor", "actualHeightFromMetadata: $actualHeightFromMetadata")
+            Log.d("VideoProcessor", "rotation metadata: $rotation")
 
             val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
+            Log.d("VideoProcessor", "finalTargetHeight: $finalTargetHeight")
+
             val videoEffects = mutableListOf<Effect>()
             if (rotation != 0) {
+                Log.d("VideoProcessor", "Menambah efek rotasi: $rotation derajat")
                 videoEffects.add(
                     ScaleAndRotateTransformation.Builder()
                         .setRotationDegrees(rotation.toFloat())
                         .build()
                 )
+            } else {
+                Log.d("VideoProcessor", "Tidak menambah efek rotasi (rotation == 0)")
             }
             videoEffects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
             videoEffects.add(Presentation.createForHeight(finalTargetHeight))
+            Log.d("VideoProcessor", "videoEffects: $videoEffects")
 
             val audioSupported = isAudioSupported(sourcePath)
+            Log.d("VideoProcessor", "audioSupported: $audioSupported")
+
             val effects = Effects(
                 if (audioSupported) listOf() else emptyList(), // Audio tetap jika didukung, hilang jika tidak
                 videoEffects
@@ -130,6 +148,16 @@ class VideoProcessor {
 
             val listener = object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, result: ExportResult) {
+                    Log.d("VideoProcessor", "Export selesai: $destPath")
+                    // Cek metadata output
+                    val retrieverOut = MediaMetadataRetriever()
+                    retrieverOut.setDataSource(destPath)
+                    val outputRotation = retrieverOut.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+                    val outputWidth = retrieverOut.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+                    val outputHeight = retrieverOut.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+                    Log.d("VideoProcessor", "output rotation: $outputRotation")
+                    Log.d("VideoProcessor", "output size: ${outputWidth}x${outputHeight}")
+                    retrieverOut.release()
                     completionCallback(Result.success(destPath))
                     releaseThread()
                 }
@@ -138,6 +166,7 @@ class VideoProcessor {
                     result: ExportResult,
                     exception: ExportException
                 ) {
+                    Log.e("VideoProcessor", "Export error: ${exception.message}", exception)
                     completionCallback(Result.failure(exception))
                     releaseThread()
                 }
@@ -197,9 +226,18 @@ class VideoProcessor {
         handlerThread?.start()
 
         runOnProcessorThread {
+            Log.d("VideoProcessor", "=== Mulai trim video ===")
+            Log.d("VideoProcessor", "sourcePath: $sourcePath")
+            Log.d("VideoProcessor", "destPath: $destPath")
+            Log.d("VideoProcessor", "targetHeight: $targetHeight")
+            Log.d("VideoProcessor", "startTimeMs: $startTimeMs, endTimeMs: $endTimeMs")
+
             val videoDurationMs = getVideoDurationMs(sourcePath)
+            Log.d("VideoProcessor", "videoDurationMs: $videoDurationMs")
+
             val safeStart = startTimeMs.coerceAtLeast(0L).coerceAtMost(videoDurationMs)
             val safeEnd = endTimeMs.coerceAtLeast(safeStart).coerceAtMost(videoDurationMs)
+            Log.d("VideoProcessor", "safeStart: $safeStart, safeEnd: $safeEnd")
 
             if (safeEnd - safeStart < 1000L) {
                 completionCallback(Result.failure(Exception("Durasi trim terlalu pendek atau tidak valid")))
@@ -224,16 +262,22 @@ class VideoProcessor {
             retriever.release()
 
             val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
+            Log.d("VideoProcessor", "finalTargetHeight: $finalTargetHeight")
+
             val videoEffects = mutableListOf<Effect>()
             if (rotation != 0) {
+                Log.d("VideoProcessor", "Menambah efek rotasi: $rotation derajat")
                 videoEffects.add(
                     ScaleAndRotateTransformation.Builder()
                         .setRotationDegrees(rotation.toFloat())
                         .build()
                 )
+            } else {
+                Log.d("VideoProcessor", "Tidak menambah efek rotasi (rotation == 0)")
             }
             videoEffects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
             videoEffects.add(Presentation.createForHeight(finalTargetHeight))
+            Log.d("VideoProcessor", "videoEffects: $videoEffects")
 
             val effects = Effects(listOf(), videoEffects)
 
