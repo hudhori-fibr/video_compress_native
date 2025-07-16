@@ -268,7 +268,9 @@ class VideoProcessor {
 
             val videoEffects = mutableListOf<Effect>()
             if (rotation != 0 || ((actualWidthFromMetadata < actualHeightFromMetadata) && rotation == 0)) {
-                Log.d("VideoProcessor", "Menambah efek rotasi: $rotation derajat" , "actualWidthFromMetadata: $actualWidthFromMetadata, actualHeightFromMetadata: $actualHeightFromMetadata")
+                Log.d("VideoProcessor", "Menambah efek rotasi: $rotation derajat")
+                Log.d("VideoProcessor", "actualWidthFromMetadata: $actualWidthFromMetadata actualHeightFromMetadata: $actualHeightFromMetadata")
+
                 videoEffects.add(
                     ScaleAndRotateTransformation.Builder()
                         .setRotationDegrees(((if (rotation != 0) rotation else 90).toFloat()))
