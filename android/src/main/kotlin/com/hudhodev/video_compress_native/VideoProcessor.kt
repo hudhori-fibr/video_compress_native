@@ -218,7 +218,21 @@ class VideoProcessor {
             this.transformer = transformerStep1
             transformerStep1.start(compositionStep1, tempFilePath)
             
-            val pollRunnableStep1 = object : Runnable { /* ... Kode polling progress Anda ... */ }
+            // Progress Polling untuk Langkah 1 (0% - 50%)
+            val pollRunnableStep1 = object : Runnable {
+                override fun run() {
+                    if (transformerStep1.getProgress(progressHolder) != Transformer.PROGRESS_STATE_UNAVAILABLE) {
+                        val overallProgress = progressHolder.progress / 2
+                        Handler(context.mainLooper).post { progressCallback(overallProgress) }
+                        if (progressHolder.progress < 100) {
+                            progressHandler?.postDelayed(this, 500)
+                        }
+                    } else {
+                        // Jika progres belum tersedia, coba lagi
+                        progressHandler?.postDelayed(this, 500)
+                    }
+                }
+            }
             progressHandler?.post(pollRunnableStep1)
         }
     }
@@ -355,15 +369,13 @@ class VideoProcessor {
                         File(destPath).delete()
                         transformerStep2.start(compositionStep2, destPath)
 
-                        // Progress Polling untuk Langkah 2
+                        // Progress Polling untuk Langkah 2 (51% - 100%)
                         val pollRunnableStep2 = object : Runnable {
                             override fun run() {
                                 if (transformerStep2.getProgress(progressHolder) != Transformer.PROGRESS_STATE_UNAVAILABLE) {
                                     val overallProgress = 50 + (progressHolder.progress / 2)
                                     Handler(context.mainLooper).post {
-                                        progressCallback(
-                                            overallProgress
-                                        )
+                                        progressCallback(overallProgress)
                                     }
                                     if (progressHolder.progress < 100) {
                                         progressHandler?.postDelayed(this, 500)
@@ -398,7 +410,7 @@ class VideoProcessor {
                 this.transformer = transformerStep1
                 transformerStep1.start(compositionStep1, tempFilePath)
 
-                // Progress Polling untuk Langkah 1
+                // Progress Polling untuk Langkah 1 (0% - 50%)
                 val pollRunnableStep1 = object : Runnable {
                     override fun run() {
                         if (transformerStep1.getProgress(progressHolder) != Transformer.PROGRESS_STATE_UNAVAILABLE) {
@@ -408,11 +420,12 @@ class VideoProcessor {
                                 progressHandler?.postDelayed(this, 500)
                             }
                         } else {
-                            progressHandler?.postDelayed(this, 500)
+                            // Jika progres belum tersedia, coba lagi
+                                progressHandler?.postDelayed(this, 500)
+                            }
                         }
                     }
-                }
-                progressHandler?.post(pollRunnableStep1)
+                    progressHandler?.post(pollRunnableStep1)
 
             } finally {
                 Handler(handlerThread!!.looper).postDelayed({
