@@ -4,7 +4,6 @@ import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.os.Handler
 import android.os.HandlerThread
-import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.Effect
 import androidx.media3.common.MediaItem
@@ -52,6 +51,35 @@ class VideoProcessor {
         } finally {
             retriever.release()
         }
+    }
+
+    private fun createVideoEffects(
+        actualWidth: Int,
+        actualHeight: Int,
+        rotation: Int,
+        targetHeight: Int
+    ): List<Effect> {
+        val effects = mutableListOf<Effect>()
+        val isPortrait = actualWidth > 0 && actualWidth < actualHeight
+        val needsRotation = rotation != 0 || (rotation == 0 && isPortrait)
+        val finalTargetHeight = minOf(targetHeight, actualHeight)
+
+        Log.d("VideoProcessor", "Final Target Dimension: $finalTargetHeight")
+
+        if (needsRotation) {
+            Log.d("VideoProcessor", "Mode Potret: Menambah rotasi dan membalik logika scaleToFit.")
+            val rotationDegrees = if (rotation != 0) rotation.toFloat() else 90f
+            effects.add(
+                ScaleAndRotateTransformation.Builder()
+                    .setRotationDegrees(rotationDegrees)
+                    .build()
+            )
+            effects.add(LanczosResample.scaleToFit(finalTargetHeight, 10000))
+        } else {
+            Log.d("VideoProcessor", "Mode Landscape: Menggunakan logika scaleToFit standar.")
+            effects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
+        }
+        return effects
     }
 
     // Tambahkan fungsi untuk cek audio encoding didukung
@@ -119,45 +147,12 @@ class VideoProcessor {
                 retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
                     ?.toIntOrNull() ?: 0
             retriever.release()
-            Log.d("VideoProcessor", "actualHeightFromMetadata: $actualHeightFromMetadata")
-            Log.d("VideoProcessor", "rotation metadata: $rotation")
-
-            val videoEffects = mutableListOf<Effect>()
-
-            val isPortrait =
-                actualWidthFromMetadata > 0 && actualWidthFromMetadata < actualHeightFromMetadata
-            val needsRotation = rotation != 0 || (rotation == 0 && isPortrait)
-
-            val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
-            Log.d("VideoProcessor", "Final Target Dimension: $finalTargetHeight")
-
-            if (needsRotation) {
-                // ---- LOGIKA UNTUK VIDEO POTRET ----
-                Log.d(
-                    "VideoProcessor",
-                    "Mode Potret: Menambah rotasi dan membalik logika scaleToFit."
-                )
-
-                // 1. Tambahkan efek rotasi
-                val rotationDegrees = if (rotation != 0) rotation.toFloat() else 90f
-                videoEffects.add(
-                    ScaleAndRotateTransformation.Builder()
-                        .setRotationDegrees(rotationDegrees)
-                        .build()
-                )
-
-                // 2. Gunakan logika scaleToFit yang "dibalik"
-                // Batasi lebarnya (yang merupakan tinggi asli)
-                videoEffects.add(LanczosResample.scaleToFit(finalTargetHeight, 10000))
-
-            } else {
-                // ---- LOGIKA UNTUK VIDEO LANDSCAPE ----
-                Log.d("VideoProcessor", "Mode Landscape: Menggunakan logika scaleToFit standar.")
-
-                // Gunakan logika scaleToFit standar, batasi tingginya
-                videoEffects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
-            }
-
+            val videoEffects = createVideoEffects(
+                actualWidthFromMetadata,
+                actualHeightFromMetadata,
+                rotation,
+                targetHeight
+            )
             Log.d("VideoProcessor", "videoEffects: $videoEffects")
 
             val audioSupported = isAudioSupported(sourcePath)
@@ -301,42 +296,12 @@ class VideoProcessor {
                     ?.toIntOrNull() ?: 0
             retriever.release()
 
-            val videoEffects = mutableListOf<Effect>()
-
-            val isPortrait =
-                actualWidthFromMetadata > 0 && actualWidthFromMetadata < actualHeightFromMetadata
-            val needsRotation = rotation != 0 || (rotation == 0 && isPortrait)
-
-            val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
-            Log.d("VideoProcessor", "Final Target Dimension: $finalTargetHeight")
-
-            if (needsRotation) {
-                // ---- LOGIKA UNTUK VIDEO POTRET ----
-                Log.d(
-                    "VideoProcessor",
-                    "Mode Potret: Menambah rotasi dan membalik logika scaleToFit."
-                )
-
-                // 1. Tambahkan efek rotasi
-                val rotationDegrees = if (rotation != 0) rotation.toFloat() else 90f
-                videoEffects.add(
-                    ScaleAndRotateTransformation.Builder()
-                        .setRotationDegrees(rotationDegrees)
-                        .build()
-                )
-
-                // 2. Gunakan logika scaleToFit yang "dibalik"
-                // Batasi lebarnya (yang merupakan tinggi asli)
-                videoEffects.add(LanczosResample.scaleToFit(finalTargetHeight, 10000))
-
-            } else {
-                // ---- LOGIKA UNTUK VIDEO LANDSCAPE ----
-                Log.d("VideoProcessor", "Mode Landscape: Menggunakan logika scaleToFit standar.")
-
-                // Gunakan logika scaleToFit standar, batasi tingginya
-                videoEffects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
-            }
-
+            val videoEffects = createVideoEffects(
+                actualWidthFromMetadata,
+                actualHeightFromMetadata,
+                rotation,
+                targetHeight
+            )
             Log.d("VideoProcessor", "videoEffects: $videoEffects")
 
             val effects = Effects(listOf(), videoEffects)
