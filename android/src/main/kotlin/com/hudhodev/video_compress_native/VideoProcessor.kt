@@ -10,6 +10,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.Presentation
 import androidx.media3.effect.LanczosResample
+import androidx.media3.effect.ScaleAndRotateTransformation
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultEncoderFactory
 import androidx.media3.transformer.EditedMediaItem
@@ -98,14 +99,18 @@ class VideoProcessor {
             // Ambil tinggi asli dan rotasi video dari metadata
             val retriever = MediaMetadataRetriever()
             retriever.setDataSource(sourcePath)
-            val actualHeightFromMetadata = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 480
+            val actualHeightFromMetadata = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: targetHeight
             val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
             retriever.release()
 
-            val finalTargetHeight = minOf(480, actualHeightFromMetadata)
+            val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
             val videoEffects = mutableListOf<Effect>()
             if (rotation != 0) {
-                videoEffects.add(Presentation.createForRotationDegrees(rotation))
+                videoEffects.add(
+                    ScaleAndRotateTransformation.Builder()
+                        .setRotationDegrees(rotation.toFloat())
+                        .build()
+                )
             }
             videoEffects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
             videoEffects.add(Presentation.createForHeight(finalTargetHeight))
@@ -183,6 +188,7 @@ class VideoProcessor {
         destPath: String,
         startTimeMs: Long = 0L,
         endTimeMs: Long = 90_000L,
+        targetHeight: Int = 480, // tambahkan parameter ini!
         progressCallback: (Int) -> Unit,
         completionCallback: (Result<String>) -> Unit
     ) {
@@ -195,8 +201,7 @@ class VideoProcessor {
             val safeStart = startTimeMs.coerceAtLeast(0L).coerceAtMost(videoDurationMs)
             val safeEnd = endTimeMs.coerceAtLeast(safeStart).coerceAtMost(videoDurationMs)
 
-            // Tambahkan pengecekan ini:
-            if (safeEnd - safeStart < 1000L) { // minimal 1 detik
+            if (safeEnd - safeStart < 1000L) {
                 completionCallback(Result.failure(Exception("Durasi trim terlalu pendek atau tidak valid")))
                 releaseThread()
                 return@runOnProcessorThread
@@ -212,9 +217,23 @@ class VideoProcessor {
                 )
                 .build()
 
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(sourcePath)
+            val actualHeightFromMetadata = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: targetHeight
+            val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+            retriever.release()
+
+            val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
             val videoEffects = mutableListOf<Effect>()
-            videoEffects.add(LanczosResample.scaleToFit(10000, 480))
-            videoEffects.add(Presentation.createForHeight(480))
+            if (rotation != 0) {
+                videoEffects.add(
+                    ScaleAndRotateTransformation.Builder()
+                        .setRotationDegrees(rotation.toFloat())
+                        .build()
+                )
+            }
+            videoEffects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
+            videoEffects.add(Presentation.createForHeight(finalTargetHeight))
 
             val effects = Effects(listOf(), videoEffects)
 
