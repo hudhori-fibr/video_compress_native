@@ -1,32 +1,32 @@
 package com.hudhodev.video_compress_native
+
 import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.os.Handler
 import android.os.HandlerThread
 import androidx.annotation.OptIn
-import androidx.media3.common.C;
+import androidx.media3.common.C
 import androidx.media3.common.Effect
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.Log
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.effect.Presentation
 import androidx.media3.effect.LanczosResample
 import androidx.media3.effect.ScaleAndRotateTransformation
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultEncoderFactory
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.EditedMediaItemSequence
-import androidx.media3.transformer.ExportResult
-import androidx.media3.transformer.Transformer
 import androidx.media3.transformer.Effects
-import androidx.media3.transformer.VideoEncoderSettings;
+import androidx.media3.transformer.ExportException
+import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.ProgressHolder
+import androidx.media3.transformer.Transformer
+import androidx.media3.transformer.VideoEncoderSettings
 import java.io.File
-import java.util.UUID
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import androidx.media3.transformer.ExportException
-import androidx.media3.transformer.ProgressHolder
+import java.util.UUID
 
 @OptIn(UnstableApi::class)
 class VideoProcessor {
@@ -44,7 +44,8 @@ class VideoProcessor {
         val retriever = MediaMetadataRetriever()
         return try {
             retriever.setDataSource(path)
-            val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+            val durationStr =
+                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
             durationStr?.toLongOrNull() ?: 0L
         } catch (e: Exception) {
             0L
@@ -108,9 +109,15 @@ class VideoProcessor {
 
             val retriever = MediaMetadataRetriever()
             retriever.setDataSource(sourcePath)
-            val actualHeightFromMetadata = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: targetHeight
-            val actualWidthFromMetadata = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
-            val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+            val actualHeightFromMetadata =
+                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+                    ?.toIntOrNull() ?: targetHeight
+            val actualWidthFromMetadata =
+                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+                    ?.toIntOrNull() ?: 0
+            val rotation =
+                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+                    ?.toIntOrNull() ?: 0
             retriever.release()
             Log.d("VideoProcessor", "actualHeightFromMetadata: $actualHeightFromMetadata")
             Log.d("VideoProcessor", "rotation metadata: $rotation")
@@ -118,40 +125,44 @@ class VideoProcessor {
             val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
             Log.d("VideoProcessor", "finalTargetHeight: $finalTargetHeight")
 
-          val videoEffects = mutableListOf<Effect>()
+            val videoEffects = mutableListOf<Effect>()
 
-val isPortrait = actualWidthFromMetadata > 0 && actualWidthFromMetadata < actualHeightFromMetadata
-val needsRotation = rotation != 0 || (rotation == 0 && isPortrait)
+            val isPortrait =
+                actualWidthFromMetadata > 0 && actualWidthFromMetadata < actualHeightFromMetadata
+            val needsRotation = rotation != 0 || (rotation == 0 && isPortrait)
 
-val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
-Log.d("VideoProcessor", "Final Target Dimension: $finalTargetHeight")
+            val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
+            Log.d("VideoProcessor", "Final Target Dimension: $finalTargetHeight")
 
-if (needsRotation) {
-    // ---- LOGIKA UNTUK VIDEO POTRET ----
-    Log.d("VideoProcessor", "Mode Potret: Menambah rotasi dan membalik logika scaleToFit.")
+            if (needsRotation) {
+                // ---- LOGIKA UNTUK VIDEO POTRET ----
+                Log.d(
+                    "VideoProcessor",
+                    "Mode Potret: Menambah rotasi dan membalik logika scaleToFit."
+                )
 
-    // 1. Tambahkan efek rotasi
-    val rotationDegrees = if (rotation != 0) rotation.toFloat() else 90f
-    videoEffects.add(
-        ScaleAndRotateTransformation.Builder()
-            .setRotationDegrees(rotationDegrees)
-            .build()
-    )
+                // 1. Tambahkan efek rotasi
+                val rotationDegrees = if (rotation != 0) rotation.toFloat() else 90f
+                videoEffects.add(
+                    ScaleAndRotateTransformation.Builder()
+                        .setRotationDegrees(rotationDegrees)
+                        .build()
+                )
 
-    // 2. Gunakan logika scaleToFit yang "dibalik"
-    // Batasi lebarnya (yang merupakan tinggi asli)
-    videoEffects.add(LanczosResample.scaleToFit(finalTargetHeight, 10000))
+                // 2. Gunakan logika scaleToFit yang "dibalik"
+                // Batasi lebarnya (yang merupakan tinggi asli)
+                videoEffects.add(LanczosResample.scaleToFit(finalTargetHeight, 10000))
 
-} else {
-    // ---- LOGIKA UNTUK VIDEO LANDSCAPE ----
-    Log.d("VideoProcessor", "Mode Landscape: Menggunakan logika scaleToFit standar.")
+            } else {
+                // ---- LOGIKA UNTUK VIDEO LANDSCAPE ----
+                Log.d("VideoProcessor", "Mode Landscape: Menggunakan logika scaleToFit standar.")
 
-    // Gunakan logika scaleToFit standar, batasi tingginya
-    videoEffects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
-}
+                // Gunakan logika scaleToFit standar, batasi tingginya
+                videoEffects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
+            }
 
-Log.d("VideoProcessor", "videoEffects: $videoEffects")
-        
+            Log.d("VideoProcessor", "videoEffects: $videoEffects")
+
             val audioSupported = isAudioSupported(sourcePath)
             Log.d("VideoProcessor", "audioSupported: $audioSupported")
 
@@ -173,15 +184,19 @@ Log.d("VideoProcessor", "videoEffects: $videoEffects")
                     // Cek metadata output
                     val retrieverOut = MediaMetadataRetriever()
                     retrieverOut.setDataSource(destPath)
-                    val outputRotation = retrieverOut.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
-                    val outputWidth = retrieverOut.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
-                    val outputHeight = retrieverOut.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+                    val outputRotation =
+                        retrieverOut.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+                    val outputWidth =
+                        retrieverOut.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+                    val outputHeight =
+                        retrieverOut.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
                     Log.d("VideoProcessor", "output rotation: $outputRotation")
                     Log.d("VideoProcessor", "output size: ${outputWidth}x${outputHeight}")
                     retrieverOut.release()
                     completionCallback(Result.success(destPath))
                     releaseThread()
                 }
+
                 override fun onError(
                     composition: Composition,
                     result: ExportResult,
@@ -192,11 +207,11 @@ Log.d("VideoProcessor", "videoEffects: $videoEffects")
                     releaseThread()
                 }
             }
-            
-            
+
+
             val videoEncoderSettings = VideoEncoderSettings.DEFAULT
                 .buildUpon()
-                .setRepeatPreviousFrameIntervalUs(C.MICROS_PER_SECOND / 30)  
+                .setRepeatPreviousFrameIntervalUs(C.MICROS_PER_SECOND / 30)
                 .build()
 
             val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
@@ -278,47 +293,57 @@ Log.d("VideoProcessor", "videoEffects: $videoEffects")
 
             val retriever = MediaMetadataRetriever()
             retriever.setDataSource(sourcePath)
-            val actualHeightFromMetadata = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: targetHeight
-            val actualWidthFromMetadata = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
-            val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+            val actualHeightFromMetadata =
+                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+                    ?.toIntOrNull() ?: targetHeight
+            val actualWidthFromMetadata =
+                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+                    ?.toIntOrNull() ?: 0
+            val rotation =
+                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+                    ?.toIntOrNull() ?: 0
             retriever.release()
 
             val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
             Log.d("VideoProcessor", "finalTargetHeight: $finalTargetHeight")
 
-                  val videoEffects = mutableListOf<Effect>()
+            val videoEffects = mutableListOf<Effect>()
 
-val isPortrait = actualWidthFromMetadata > 0 && actualWidthFromMetadata < actualHeightFromMetadata
-val needsRotation = rotation != 0 || (rotation == 0 && isPortrait)
+            val isPortrait =
+                actualWidthFromMetadata > 0 && actualWidthFromMetadata < actualHeightFromMetadata
+            val needsRotation = rotation != 0 || (rotation == 0 && isPortrait)
 
-val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
-Log.d("VideoProcessor", "Final Target Dimension: $finalTargetHeight")
+            val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
+            Log.d("VideoProcessor", "Final Target Dimension: $finalTargetHeight")
 
-if (needsRotation) {
-    // ---- LOGIKA UNTUK VIDEO POTRET ----
-    Log.d("VideoProcessor", "Mode Potret: Menambah rotasi dan membalik logika scaleToFit.")
+            if (needsRotation) {
+                // ---- LOGIKA UNTUK VIDEO POTRET ----
+                Log.d(
+                    "VideoProcessor",
+                    "Mode Potret: Menambah rotasi dan membalik logika scaleToFit."
+                )
 
-    // 1. Tambahkan efek rotasi
-    val rotationDegrees = if (rotation != 0) rotation.toFloat() else 90f
-    videoEffects.add(
-        ScaleAndRotateTransformation.Builder()
-            .setRotationDegrees(rotationDegrees)
-            .build()
-    )
+                // 1. Tambahkan efek rotasi
+                val rotationDegrees = if (rotation != 0) rotation.toFloat() else 90f
+                videoEffects.add(
+                    ScaleAndRotateTransformation.Builder()
+                        .setRotationDegrees(rotationDegrees)
+                        .build()
+                )
 
-    // 2. Gunakan logika scaleToFit yang "dibalik"
-    // Batasi lebarnya (yang merupakan tinggi asli)
-    videoEffects.add(LanczosResample.scaleToFit(finalTargetHeight, 10000))
+                // 2. Gunakan logika scaleToFit yang "dibalik"
+                // Batasi lebarnya (yang merupakan tinggi asli)
+                videoEffects.add(LanczosResample.scaleToFit(finalTargetHeight, 10000))
 
-} else {
-    // ---- LOGIKA UNTUK VIDEO LANDSCAPE ----
-    Log.d("VideoProcessor", "Mode Landscape: Menggunakan logika scaleToFit standar.")
+            } else {
+                // ---- LOGIKA UNTUK VIDEO LANDSCAPE ----
+                Log.d("VideoProcessor", "Mode Landscape: Menggunakan logika scaleToFit standar.")
 
-    // Gunakan logika scaleToFit standar, batasi tingginya
-    videoEffects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
-}
+                // Gunakan logika scaleToFit standar, batasi tingginya
+                videoEffects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
+            }
 
-Log.d("VideoProcessor", "videoEffects: $videoEffects")
+            Log.d("VideoProcessor", "videoEffects: $videoEffects")
 
             val effects = Effects(listOf(), videoEffects)
 
@@ -334,6 +359,7 @@ Log.d("VideoProcessor", "videoEffects: $videoEffects")
                     completionCallback(Result.success(destPath))
                     releaseThread()
                 }
+
                 override fun onError(
                     composition: Composition,
                     result: ExportResult,
@@ -346,7 +372,7 @@ Log.d("VideoProcessor", "videoEffects: $videoEffects")
 
             val videoEncoderSettings = VideoEncoderSettings.DEFAULT
                 .buildUpon()
-                .setRepeatPreviousFrameIntervalUs(C.MICROS_PER_SECOND / 30) 
+                .setRepeatPreviousFrameIntervalUs(C.MICROS_PER_SECOND / 30)
                 .build()
 
             val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
