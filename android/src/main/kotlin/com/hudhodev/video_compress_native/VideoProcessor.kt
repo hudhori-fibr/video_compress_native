@@ -95,16 +95,18 @@ class VideoProcessor {
                 )
                 .build()
 
-            val videoEffects = mutableListOf<Effect>()
-
-            // Ambil tinggi asli video dari metadata
+            // Ambil tinggi asli dan rotasi video dari metadata
             val retriever = MediaMetadataRetriever()
             retriever.setDataSource(sourcePath)
-            val actualHeightFromMetadata = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: targetHeight
+            val actualHeightFromMetadata = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 480
+            val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
             retriever.release()
 
-            val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
-
+            val finalTargetHeight = minOf(480, actualHeightFromMetadata)
+            val videoEffects = mutableListOf<Effect>()
+            if (rotation != 0) {
+                videoEffects.add(Presentation.createForRotationDegrees(rotation))
+            }
             videoEffects.add(LanczosResample.scaleToFit(10000, finalTargetHeight))
             videoEffects.add(Presentation.createForHeight(finalTargetHeight))
 
