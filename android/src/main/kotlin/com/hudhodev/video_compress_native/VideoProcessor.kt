@@ -129,8 +129,7 @@ class VideoProcessor {
                 retriever.release()
 
                 val effects = createVideoEffects(actualWidth, actualHeight, targetHeight)
-                val audioEffects =
-                    if (isAudioSupported(sourcePath)) listOf<Effect>() else emptyList()
+                val audioEffects = if (isAudioSupported(sourcePath)) listOf<AudioProcessor>() else emptyList()
 
                 val editedMediaItemStep1 = EditedMediaItem.Builder(fullMediaItem)
                     .setEffects(Effects(audioEffects, effects))
