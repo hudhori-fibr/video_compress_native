@@ -122,9 +122,6 @@ class VideoProcessor {
             Log.d("VideoProcessor", "actualHeightFromMetadata: $actualHeightFromMetadata")
             Log.d("VideoProcessor", "rotation metadata: $rotation")
 
-            val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
-            Log.d("VideoProcessor", "finalTargetHeight: $finalTargetHeight")
-
             val videoEffects = mutableListOf<Effect>()
 
             val isPortrait =
@@ -303,9 +300,6 @@ class VideoProcessor {
                 retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
                     ?.toIntOrNull() ?: 0
             retriever.release()
-
-            val finalTargetHeight = minOf(targetHeight, actualHeightFromMetadata)
-            Log.d("VideoProcessor", "finalTargetHeight: $finalTargetHeight")
 
             val videoEffects = mutableListOf<Effect>()
 
