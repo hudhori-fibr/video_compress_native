@@ -60,10 +60,10 @@ class VideoProcessor {
         targetHeight: Int
     ): List<Effect> {
         val effects = mutableListOf<Effect>()
-val finalOutputHeight = minOf(targetHeight, actualHeightFromMetadata)
+val finalOutputHeight = minOf(targetHeight, actualHeight)
 
-val aspectRatio = if (actualHeightFromMetadata > 0) {
-    actualWidthFromMetadata.toFloat() / actualHeightFromMetadata.toFloat()
+val aspectRatio = if (actualHeight > 0) {
+    actualWidth.toFloat() / actualHeight.toFloat()
 } else {
     1.0f
 }
