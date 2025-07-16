@@ -73,12 +73,9 @@ class VideoProcessor {
         Log.d("VideoProcessor", "Final target resolution: ${finalOutputWidth}x$finalOutputHeight")
         Log.d("VideoProcessor", "Rotation: $rotation")
         Log.d("VideoProcessor", "Aspect ratio: $aspectRatio")
-        effects.add(LanczosResample.scaleToFit(finalOutputWidth, finalOutputHeight))
-        if (rotation == 0 && aspectRatio < 1) {
-            effects.add(Presentation.createForAspectRatio(1/aspectRatio, Presentation.LAYOUT_STRETCH_TO_FIT))
-        } else {
-            effects.add(Presentation.createForAspectRatio(aspectRatio, Presentation.LAYOUT_STRETCH_TO_FIT))
-        }
+
+        effects.add(Presentation.createForAspectRatio(aspectRatio, Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP))
+
         Log.d("VideoProcessor", "videoEffects: $effects")
         return effects
     }
