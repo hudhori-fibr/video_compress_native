@@ -7,10 +7,12 @@ import android.os.HandlerThread
 import androidx.media3.common.C
 import androidx.media3.common.Effect
 import androidx.media3.common.MediaItem
+import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.util.Log
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.LanczosResample
 import androidx.media3.effect.Presentation
+import androidx.media3.effect.ScaleAndRotateTransformation
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultEncoderFactory
 import androidx.media3.transformer.EditedMediaItem
@@ -21,6 +23,7 @@ import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.Transformer
 import androidx.media3.transformer.VideoEncoderSettings
+import com.google.common.collect.ImmutableList
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -33,6 +36,8 @@ class VideoProcessor {
     private var transformer: Transformer? = null
     private var handlerThread: HandlerThread? = null
     private var progressHandler: Handler? = null
+    private val DEFAULT_FRAME_RATE_FPS: Int = 30
+
 
     private fun generateOutputFilePath(destDir: String, ext: String = "mp4"): String {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(Date())
@@ -93,6 +98,46 @@ class VideoProcessor {
         }
     }
 
+
+
+    private fun createMediaItem(sourcePath: String, startTimeMs: Long, endTimeMs: Long): MediaItem {
+        val mediaItemBuilder = MediaItem.Builder().setUri(sourcePath);
+        val videoDurationMs = getVideoDurationMs(sourcePath)
+        val safeStart = startTimeMs.coerceAtLeast(0L).coerceAtMost(videoDurationMs)
+        val safeEnd = endTimeMs.coerceAtLeast(safeStart).coerceAtMost(videoDurationMs)
+        mediaItemBuilder.setClippingConfiguration(
+            MediaItem.ClippingConfiguration.Builder()
+                .setStartPositionMs(safeStart)
+                .setEndPositionMs(safeEnd)
+                .build()
+        )
+        return mediaItemBuilder.build();
+    }
+
+    private fun createComposition(mediaItem: MediaItem, targetHeight: Int): Composition {
+        val editedMediaItemBuilder = EditedMediaItem.Builder(mediaItem)
+        editedMediaItemBuilder.setFrameRate(DEFAULT_FRAME_RATE_FPS)
+
+        val audioProcessors = ImmutableList.of<AudioProcessor>()
+        val videoEffects = createVideoEffect(targetHeight)
+
+        editedMediaItemBuilder.setEffects(Effects(audioProcessors, videoEffects))
+
+        val compositionBuilder = Composition.Builder(EditedMediaItemSequence
+            .Builder(editedMediaItemBuilder.build()).build())
+        return compositionBuilder.build()
+    }
+
+    private fun createVideoEffect(targetHeight: Int): ImmutableList<Effect> {
+        val effects = ImmutableList.builder<Effect>()
+//        effects.add(ScaleAndRotateTransformation.Builder()
+//            .setRotationDegrees(0f)
+//            .build())
+        effects.add(LanczosResample.scaleToFit(10000, targetHeight));
+        effects.add(Presentation.createForHeight(targetHeight))
+        return effects.build()
+    }
+
     fun processVideo(
         context: Context,
         sourcePath: String,
@@ -121,50 +166,27 @@ class VideoProcessor {
             val safeEnd = endTimeMs.coerceAtLeast(safeStart).coerceAtMost(videoDurationMs)
             Log.d("VideoProcessor", "safeStart: $safeStart, safeEnd: $safeEnd")
 
-            val mediaItem = MediaItem.Builder()
-                .setUri(sourcePath)
-                .setClippingConfiguration(
-                    MediaItem.ClippingConfiguration.Builder()
-                        .setStartPositionMs(safeStart)
-                        .setEndPositionMs(safeEnd)
-                        .build()
-                )
-                .build()
-
-            val retriever = MediaMetadataRetriever()
-            retriever.setDataSource(sourcePath)
+            val retrieverSource = MediaMetadataRetriever()
+            retrieverSource.setDataSource(sourcePath)
             val actualHeightFromMetadata =
-                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
-                    ?.toIntOrNull() ?: targetHeight
+                retrieverSource.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+
+            Log.d("VideoProcessor", "actualHeightFromMetadata: $actualHeightFromMetadata")
+
             val actualWidthFromMetadata =
-                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
-                    ?.toIntOrNull() ?: 0
+                retrieverSource.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+
+            Log.d("VideoProcessor", "actualWidthFromMetadata: $actualWidthFromMetadata")
+
             val rotation =
-                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
-                    ?.toIntOrNull() ?: 0
-            retriever.release()
-            val videoEffects = createVideoEffects(
-                actualWidthFromMetadata,
-                actualHeightFromMetadata,
-                rotation,
-                targetHeight
-            )
-            Log.d("VideoProcessor", "videoEffects: $videoEffects")
+                retrieverSource.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
 
-            val audioSupported = isAudioSupported(sourcePath)
-            Log.d("VideoProcessor", "audioSupported: $audioSupported")
+            Log.d("VideoProcessor", "rotation source: $rotation")
 
-            val effects = Effects(
-                if (audioSupported) listOf() else emptyList(), // Audio tetap jika didukung, hilang jika tidak
-                videoEffects
-            )
+            retrieverSource.release()
 
-            val editedMediaItem = EditedMediaItem.Builder(mediaItem)
-                .setEffects(effects)
-                .build()
-
-            val editedMediaItemSequence = EditedMediaItemSequence(editedMediaItem)
-            val composition = Composition.Builder(editedMediaItemSequence).build()
+            val mediaItem = createMediaItem(sourcePath, safeStart, safeEnd)
+            val composition = createComposition(mediaItem, targetHeight)
 
             val listener = object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, result: ExportResult) {
