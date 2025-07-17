@@ -169,12 +169,12 @@ class VideoProcessor {
             val retrieverSource = MediaMetadataRetriever()
             retrieverSource.setDataSource(sourcePath)
             val actualHeightFromMetadata =
-                retrieverSource.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+                retrieverSource.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
 
             Log.d("VideoProcessor", "actualHeightFromMetadata: $actualHeightFromMetadata")
 
             val actualWidthFromMetadata =
-                retrieverSource.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+                retrieverSource.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
 
             Log.d("VideoProcessor", "actualWidthFromMetadata: $actualWidthFromMetadata")
 
@@ -185,8 +185,21 @@ class VideoProcessor {
 
             retrieverSource.release()
 
+
+
+            val aspectRatio = if (actualHeightFromMetadata > 0) {
+                actualWidthFromMetadata.toFloat() / actualHeightFromMetadata.toFloat()
+            } else {
+                1.0f
+            }
+            val finalOutputHeight = minOf(targetHeight, actualHeightFromMetadata)
+            val finalOutputWidth = (finalOutputHeight * aspectRatio).toInt()
+
             val mediaItem = createMediaItem(sourcePath, safeStart, safeEnd)
-            val composition = createComposition(mediaItem, targetHeight)
+            var composition = createComposition(mediaItem, finalOutputHeight)
+            if(aspectRatio > 1) {
+                composition = createComposition(mediaItem, finalOutputWidth)
+            }
 
             val listener = object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, result: ExportResult) {
