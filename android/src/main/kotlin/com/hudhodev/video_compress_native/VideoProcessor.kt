@@ -422,4 +422,25 @@ class VideoProcessor {
             Handler(it.looper).post { action() }
         } ?: action()
     }
+
+    fun getVideoCodec(path: String): String? {
+        val retriever = android.media.MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(path)
+            val mime = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_MIMETYPE)
+
+            when (mime) {
+                "video/avc" -> "H.264"
+                "video/hevc" -> "H.265"
+                "video/mp4v-es" -> "MPEG-4"
+                else -> mime ?: "UNKNOWN"
+            }
+        } catch (e: Exception) {
+            null
+        } finally {
+            retriever.release()
+        }
+    }
+
+
 }

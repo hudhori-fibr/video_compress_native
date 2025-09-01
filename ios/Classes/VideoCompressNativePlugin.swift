@@ -23,10 +23,44 @@ public class VideoCompressNativePlugin: NSObject, FlutterPlugin, FlutterStreamHa
       handleProcessVideo(call: call, result: result)
     case "trimVideo":
       handleTrimVideo(call: call, result: result)
+    case "getVideoCodec":
+        handleGetVideoCodec(call: call, result: result)
     default:
       result(FlutterMethodNotImplemented)
     }
   }
+
+  private func handleGetVideoCodec(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard let args = call.arguments as? [String: Any],
+          let path = args["path"] as? String else {
+        result(FlutterError(code: "INVALID_ARGS", message: "Path tidak valid", details: nil))
+        return
+    }
+
+    let asset = AVURLAsset(url: URL(fileURLWithPath: path))
+    guard let videoTrack = asset.tracks(withMediaType: .video).first,
+          let formatDesc = videoTrack.formatDescriptions.first as? CMFormatDescription else {
+        result(FlutterError(code: "NO_VIDEO_TRACK", message: "Tidak ada track video", details: nil))
+        return
+    }
+
+    let codecType = CMFormatDescriptionGetMediaSubType(formatDesc)
+    // Mapping ke nama yang lebih gampang
+    let codecString: String
+    switch codecType {
+        case kCMVideoCodecType_H264:
+            codecString = "H.264"
+        case kCMVideoCodecType_HEVC:
+            codecString = "H.265"
+        case kCMVideoCodecType_MPEG4Video:
+            codecString = "MPEG-4"
+        default:
+            codecString = "UNKNOWN(\(codecType))"
+    }
+
+    result(codecString)
+  }
+
 
   private func handleProcessVideo(call: FlutterMethodCall, result: @escaping FlutterResult) {
     guard let args = call.arguments as? [String: Any],

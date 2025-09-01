@@ -38,6 +38,7 @@ class VideoCompressNativePlugin: FlutterPlugin, MethodCallHandler, StreamHandler
     when (call.method) {
       "processVideo" -> handleProcessVideo(call, result)
       "trimVideo" -> handleTrimVideo(call, result)
+      "getVideoCodec" -> handleGetVideoCodec(call, result)
       "getPlatformVersion" -> result.success("Android ${android.os.Build.VERSION.RELEASE}")
       else -> result.notImplemented()
     }
@@ -115,6 +116,16 @@ class VideoCompressNativePlugin: FlutterPlugin, MethodCallHandler, StreamHandler
         eventSink?.error("PROCESSING_FAILED", error.localizedMessage, error.stackTraceToString())
         result.error("PROCESSING_FAILED", error.localizedMessage, null)
       }
+    }
+  }
+
+  private fun handleGetVideoCodec(call: MethodCall, result: Result) {
+    try {
+        val path = call.argument<String>("path")!!
+        val codec = videoProcessor.getVideoCodec(path)
+        result.success(codec)
+    } catch (e: Exception) {
+        result.error("CODEC_ERROR", e.localizedMessage, e.stackTraceToString())
     }
   }
 
