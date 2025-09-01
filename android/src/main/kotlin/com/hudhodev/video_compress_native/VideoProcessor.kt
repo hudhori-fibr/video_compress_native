@@ -423,7 +423,7 @@ class VideoProcessor {
         } ?: action()
     }
 
-    fun getRealVideoCodec(path: String): String {
+    fun getVideoCodec(path: String): String {
         val extractor = MediaExtractor()
         return try {
             extractor.setDataSource(path)
