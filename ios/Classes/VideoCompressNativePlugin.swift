@@ -54,6 +54,10 @@ public class VideoCompressNativePlugin: NSObject, FlutterPlugin, FlutterStreamHa
             codecString = "H.265"
         case kCMVideoCodecType_MPEG4Video:
             codecString = "MPEG-4"
+        case kCMVideoCodecType_VP9:
+            codecString = "VP9"
+        case kCMVideoCodecType_VP8:
+            codecString = "VP8"
         default:
             codecString = "UNKNOWN(\(codecType))"
     }
