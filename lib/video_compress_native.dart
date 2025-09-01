@@ -57,7 +57,7 @@ class VideoCompressNative {
     return VideoCompressNativePlatform.instance.getPlatformVersion();
   }
 
-  Future<String?> getVideoCodec(String path) async {
+  static Future<String?> getVideoCodec(String path) async {
     final codec = await _methodChannel.invokeMethod<String>('getVideoCodec', {
       'path': path,
     });
