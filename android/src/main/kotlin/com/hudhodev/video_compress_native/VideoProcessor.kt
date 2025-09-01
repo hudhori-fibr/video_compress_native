@@ -1,6 +1,8 @@
 package com.hudhodev.video_compress_native
 
 import android.content.Context
+import android.media.MediaExtractor
+import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.os.Handler
 import android.os.HandlerThread
