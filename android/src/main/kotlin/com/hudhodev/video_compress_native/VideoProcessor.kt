@@ -237,7 +237,7 @@ class VideoProcessor {
 
             val videoEncoderSettings = VideoEncoderSettings.DEFAULT
                 .buildUpon()
-                .setEncodingFrameRate(30)
+                .setRepeatPreviousFrameIntervalUs(C.MICROS_PER_SECOND / DEFAULT_FRAME_RATE_FPS)
                 .build()
 
             val audioEncoderSettings = AudioEncoderSettings.DEFAULT
@@ -248,6 +248,7 @@ class VideoProcessor {
 
             val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
                 .setEnableFallback(true)
+                .setEnableCodecDbLite(true) // Enable CodecDB Lite for better codec selection
                 .setRequestedVideoEncoderSettings(videoEncoderSettings)
                 .setRequestedAudioEncoderSettings(audioEncoderSettings)
                 .build()
@@ -256,6 +257,8 @@ class VideoProcessor {
                 .setEncoderFactory(encoderFactory)
                 .setLooper(handlerThread!!.looper)
                 .addListener(listener)
+                .experimentalSetTrimOptimizationEnabled(true) // Enable trim optimization
+                .experimentalSetMp4EditListTrimEnabled(true) // Enable MP4 edit list trimming for faster trimming
                 .build()
 
             this.transformer = transformer
