@@ -1,4 +1,7 @@
-package com.hudhodev.video_compress_native
+package com.hudhodev.video_import androidx.media3.transformer.DefaultAudioEncoderFactory
+import androidx.media3.transformer.DefaultVideoEncoderFactory
+import androidx.media3.transformer.VideoEncoderFactory
+import com.google.common.collect.ImmutableListmpress_native
 
 import android.content.Context
 import android.media.MediaExtractor
@@ -235,20 +238,18 @@ class VideoProcessor {
             }
 
 
-            val videoEncoderSettings = VideoEncoderSettings.Builder()
-                .setEncodingFrameRate(DEFAULT_FRAME_RATE_FPS)
-                .build()
-
-            val audioEncoderSettings = AudioEncoderSettings.Builder()
-                .setBitrate(128000) // 128 kbps for good quality
-                .setMimeType(MediaFormat.MIMETYPE_AUDIO_AAC)
-                .build()
-
             val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
                 .setEnableFallback(true)
-                .setEnableCodecDbLite(true) // Enable CodecDB Lite for better codec selection
-                .setRequestedVideoEncoderSettings(videoEncoderSettings)
-                .setRequestedAudioEncoderSettings(audioEncoderSettings)
+                .setVideoEncoderFactory(
+                    DefaultVideoEncoderFactory.Builder()
+                        .setRequestedProfile(VideoEncoderFactory.Profile.H264_BASELINE)
+                        .build()
+                )
+                .setAudioEncoderFactory(
+                    DefaultAudioEncoderFactory.Builder()
+                        .setRequestedMimeType(MediaFormat.MIMETYPE_AUDIO_AAC)
+                        .build()
+                )
                 .build()
 
             val transformer = Transformer.Builder(context.applicationContext)
