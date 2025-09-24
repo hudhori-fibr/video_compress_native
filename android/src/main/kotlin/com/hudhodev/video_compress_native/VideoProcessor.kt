@@ -1,7 +1,35 @@
-package com.hudhodev.video_import androidx.media3.transformer.DefaultAudioEncoderFactory
-import androidx.media3.transformer.DefaultVideoEncoderFactory
-import androidx.media3.transformer.VideoEncoderFactory
-import com.google.common.collect.ImmutableListmpress_native
+package com.hudhodev.video_package com.hudhodev.video_compress_native
+
+import android.content.Context
+import android.media.MediaExtractor
+import android.media.MediaFormat
+import android.media.MediaMetadataRetriever
+import android.os.Handler
+import android.os.HandlerThread
+import androidx.media3.common.C
+import androidx.media3.common.Effect
+import androidx.media3.common.MediaItem
+import androidx.media3.common.audio.AudioProcessor
+import androidx.media3.common.util.Log
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.effect.LanczosResample
+import androidx.media3.effect.Presentation
+import androidx.media3.effect.ScaleAndRotateTransformation
+import androidx.media3.transformer.Composition
+import androidx.media3.transformer.DefaultEncoderFactory
+import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.EditedMediaItemSequence
+import androidx.media3.transformer.Effects
+import androidx.media3.transformer.ExportException
+import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.ProgressHolder
+import androidx.media3.transformer.Transformer
+import com.google.common.collect.ImmutableList
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.UUIDmpress_native
 
 import android.content.Context
 import android.media.MediaExtractor
@@ -240,16 +268,6 @@ class VideoProcessor {
 
             val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
                 .setEnableFallback(true)
-                .setVideoEncoderFactory(
-                    DefaultVideoEncoderFactory.Builder()
-                        .setRequestedProfile(VideoEncoderFactory.Profile.H264_BASELINE)
-                        .build()
-                )
-                .setAudioEncoderFactory(
-                    DefaultAudioEncoderFactory.Builder()
-                        .setRequestedMimeType(MediaFormat.MIMETYPE_AUDIO_AAC)
-                        .build()
-                )
                 .build()
 
             val transformer = Transformer.Builder(context.applicationContext)
