@@ -235,11 +235,13 @@ class VideoProcessor {
             }
 
 
-            val videoEncoderSettings = VideoEncoderSettings.Builder()
+            val videoEncoderSettings = VideoEncoderSettings.DEFAULT
+                .buildUpon()
                 .setEncodingFrameRate(30)
                 .build()
 
-            val audioEncoderSettings = AudioEncoderSettings.Builder()
+            val audioEncoderSettings = AudioEncoderSettings.DEFAULT
+                .buildUpon()
                 .setBitrate(128000) // 128 kbps for good quality
                 .setMimeType(MediaFormat.MIMETYPE_AUDIO_AAC)
                 .build()
