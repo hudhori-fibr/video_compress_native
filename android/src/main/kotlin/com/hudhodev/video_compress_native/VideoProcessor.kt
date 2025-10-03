@@ -247,7 +247,7 @@ class VideoProcessor {
 
             val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
                 .setEnableFallback(true)
-                .setEnableCodecDbLite(true) // Enable CodecDB Lite like TransformerActivity
+                .setEnableCodecDbLite(true) // Available in Media3 1.8.0
                 .setRequestedVideoEncoderSettings(videoEncoderSettings)
                 .setRequestedAudioEncoderSettings(audioEncoderSettings)
                 .build()
@@ -383,7 +383,7 @@ class VideoProcessor {
 
             val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
                 .setEnableFallback(true)
-                .setEnableCodecDbLite(true) // Enable CodecDB Lite like TransformerActivity
+                .setEnableCodecDbLite(true) // Available in Media3 1.8.0
                 .setRequestedVideoEncoderSettings(videoEncoderSettings)
                 .setRequestedAudioEncoderSettings(audioEncoderSettings)
                 .build()
