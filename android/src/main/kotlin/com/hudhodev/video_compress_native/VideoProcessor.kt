@@ -234,20 +234,9 @@ class VideoProcessor {
             }
 
 
-            val videoEncoderSettings = VideoEncoderSettings.Builder()
-                .setEncodingFrameRate(DEFAULT_FRAME_RATE_FPS)
-                .build()
-
-            val audioEncoderSettings = AudioEncoderSettings.Builder()
-                .setBitrate(128000) // 128 kbps for good quality AAC-LC
-                .setMimeType(MediaFormat.MIMETYPE_AUDIO_AAC)
-                .build()
-
+            // Use default encoder factory - Media3 1.8.0 uses AAC-LC by default for audio
             val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
                 .setEnableFallback(true)
-                .setEnableCodecDbLite(true) // Available in Media3 1.8.0
-                .setRequestedVideoEncoderSettings(videoEncoderSettings)
-                .setRequestedAudioEncoderSettings(audioEncoderSettings)
                 .build()
 
             val transformer = Transformer.Builder(context.applicationContext)
@@ -368,20 +357,9 @@ class VideoProcessor {
                 }
             }
 
-            val videoEncoderSettings = VideoEncoderSettings.Builder()
-                .setEncodingFrameRate(DEFAULT_FRAME_RATE_FPS)
-                .build()
-
-            val audioEncoderSettings = AudioEncoderSettings.Builder()
-                .setBitrate(128000) // 128 kbps for good quality AAC-LC
-                .setMimeType(MediaFormat.MIMETYPE_AUDIO_AAC)
-                .build()
-
+            // Use default encoder factory - Media3 1.8.0 uses AAC-LC by default for audio
             val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
                 .setEnableFallback(true)
-                .setEnableCodecDbLite(true) // Available in Media3 1.8.0
-                .setRequestedVideoEncoderSettings(videoEncoderSettings)
-                .setRequestedAudioEncoderSettings(audioEncoderSettings)
                 .build()
 
             val transformer = Transformer.Builder(context.applicationContext)
