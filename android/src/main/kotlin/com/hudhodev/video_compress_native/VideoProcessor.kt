@@ -234,13 +234,11 @@ class VideoProcessor {
             }
 
 
-            val videoEncoderSettings = VideoEncoderSettings.DEFAULT
-                .buildUpon()
-                .setRepeatPreviousFrameIntervalUs(C.MICROS_PER_SECOND / DEFAULT_FRAME_RATE_FPS)
+            val videoEncoderSettings = VideoEncoderSettings.Builder()
+                .setEncodingFrameRate(DEFAULT_FRAME_RATE_FPS)
                 .build()
 
-            val audioEncoderSettings = AudioEncoderSettings.DEFAULT
-                .buildUpon()
+            val audioEncoderSettings = AudioEncoderSettings.Builder()
                 .setBitrate(128000) // 128 kbps for good quality AAC-LC
                 .setMimeType(MediaFormat.MIMETYPE_AUDIO_AAC)
                 .build()
@@ -370,13 +368,11 @@ class VideoProcessor {
                 }
             }
 
-            val videoEncoderSettings = VideoEncoderSettings.DEFAULT
-                .buildUpon()
-                .setRepeatPreviousFrameIntervalUs(C.MICROS_PER_SECOND / DEFAULT_FRAME_RATE_FPS)
+            val videoEncoderSettings = VideoEncoderSettings.Builder()
+                .setEncodingFrameRate(DEFAULT_FRAME_RATE_FPS)
                 .build()
 
-            val audioEncoderSettings = AudioEncoderSettings.DEFAULT
-                .buildUpon()
+            val audioEncoderSettings = AudioEncoderSettings.Builder()
                 .setBitrate(128000) // 128 kbps for good quality AAC-LC
                 .setMimeType(MediaFormat.MIMETYPE_AUDIO_AAC)
                 .build()
