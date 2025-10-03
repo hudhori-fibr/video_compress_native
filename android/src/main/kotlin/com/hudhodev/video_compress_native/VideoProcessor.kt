@@ -23,6 +23,8 @@ import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.Transformer
 import androidx.media3.transformer.VideoEncoderSettings
+import androidx.media3.transformer.AudioEncoderSettings
+import android.media.MediaFormat
 import com.google.common.collect.ImmutableList
 import java.io.File
 import java.text.SimpleDateFormat
@@ -237,9 +239,16 @@ class VideoProcessor {
                 .setRepeatPreviousFrameIntervalUs(C.MICROS_PER_SECOND / 30)
                 .build()
 
+            val audioEncoderSettings = AudioEncoderSettings.DEFAULT
+                .buildUpon()
+                .setBitrate(128000) // 128 kbps for good quality AAC-LC
+                .setMimeType(MediaFormat.MIMETYPE_AUDIO_AAC)
+                .build()
+
             val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
                 .setEnableFallback(true)
                 .setRequestedVideoEncoderSettings(videoEncoderSettings)
+                .setRequestedAudioEncoderSettings(audioEncoderSettings)
                 .build()
 
             val transformer = Transformer.Builder(context.applicationContext)
