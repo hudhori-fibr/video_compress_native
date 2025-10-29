@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/services.dart';
 import 'package:video_compress_native/video_compress_native.dart';
 import 'package:open_file/open_file.dart';
 
@@ -212,6 +211,18 @@ class _VideoProcessorPageState extends State<VideoProcessorPage> {
                         ),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
                 child: const Text('Trim Video (Cepat)'),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed:
+                    _isProcessing
+                        ? null
+                        : () => _runProcess(
+                          (path) =>
+                              VideoCompressNative.compressVideo(path: path),
+                        ),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                child: const Text('Kompresi Video Saja'),
               ),
               const SizedBox(height: 20),
               Text(_status),

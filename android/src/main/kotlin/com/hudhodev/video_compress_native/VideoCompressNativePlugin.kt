@@ -38,6 +38,7 @@ class VideoCompressNativePlugin: FlutterPlugin, MethodCallHandler, StreamHandler
     when (call.method) {
       "processVideo" -> handleProcessVideo(call, result)
       "trimVideo" -> handleTrimVideo(call, result)
+      "compressVideo" -> handleCompressVideo(call, result)
       "getPlatformVersion" -> result.success("Android ${android.os.Build.VERSION.RELEASE}")
       else -> result.notImplemented()
     }
@@ -91,6 +92,23 @@ class VideoCompressNativePlugin: FlutterPlugin, MethodCallHandler, StreamHandler
         destPath = outputPath,
         startTimeMs = startTimeMs,
         endTimeMs = endTimeMs,
+        progressCallback = { progress -> sendProgress(progress.toDouble() / 100.0) },
+        completionCallback = { res -> handleCompletion(res, result) }
+      )
+    } catch (e: Exception) {
+      result.error("ARGUMENT_ERROR", e.localizedMessage, e.stackTraceToString())
+    }
+  }
+    
+  private fun handleCompressVideo(call: MethodCall, result: Result) {
+    try {
+      val path = call.argument<String>("path")!!
+      val outputPath = generateOutputFilePath(context.cacheDir)
+
+      videoProcessor.compressVideoOnly(
+        context = context,
+        sourcePath = path,
+        destPath = outputPath,
         progressCallback = { progress -> sendProgress(progress.toDouble() / 100.0) },
         completionCallback = { res -> handleCompletion(res, result) }
       )

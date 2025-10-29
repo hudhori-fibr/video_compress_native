@@ -23,6 +23,8 @@ public class VideoCompressNativePlugin: NSObject, FlutterPlugin, FlutterStreamHa
       handleProcessVideo(call: call, result: result)
     case "trimVideo":
       handleTrimVideo(call: call, result: result)
+    case "compressVideo":
+      handleCompressVideo(call: call, result: result)
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -49,6 +51,15 @@ public class VideoCompressNativePlugin: NSObject, FlutterPlugin, FlutterStreamHa
             return
         }
         performTrimOnly(path: path, startTime: startTime, endTime: endTime, flutterResult: result)
+    }
+    
+    private func handleCompressVideo(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let path = args["path"] as? String else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Argumen tidak valid", details: nil))
+            return
+        }
+        performCompressionOnly(path: path, flutterResult: result)
     }
 
 private func processVideo(path: String, startTime: Double, endTime: Double, targetHeight: Int?, flutterResult: @escaping FlutterResult) {
@@ -132,6 +143,26 @@ private func processVideo(path: String, startTime: Double, endTime: Double, targ
         let asset = AVURLAsset(url: URL(fileURLWithPath: path))
         startExport(asset: asset, preset: AVAssetExportPresetPassthrough, videoComposition: nil,
                     startTime: startTime, endTime: endTime, flutterResult: flutterResult)
+    }
+    
+    private func performCompressionOnly(path: String, flutterResult: @escaping FlutterResult) {
+        let url = URL(fileURLWithPath: path)
+        let asset = AVURLAsset(url: url)
+        
+        asset.loadValuesAsynchronously(forKeys: ["duration"]) {
+            var error: NSError?
+            let status = asset.statusOfValue(forKey: "duration", error: &error)
+            guard status == .loaded else {
+                flutterResult(FlutterError(code: "LOAD_FAILED", message: "Gagal memuat durasi video", details: error?.localizedDescription))
+                return
+            }
+            
+            let videoDuration = asset.duration.seconds
+            
+            DispatchQueue.main.async {
+                self.startCompressionExport(asset: asset, flutterResult: flutterResult)
+            }
+        }
     }
 
 private func startExport(asset: AVAsset,
@@ -222,6 +253,51 @@ private func startExport(asset: AVAsset,
         self.timer = nil
         self.eventSink = nil
         return nil
+    }
+
+    private func startCompressionExport(asset: AVAsset, flutterResult: @escaping FlutterResult) {
+        guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetMediumQuality) else {
+            flutterResult(FlutterError(code: "SESSION_FAILED", message: "Gagal membuat AVAssetExportSession", details: nil))
+            return
+        }
+
+        self.exportSession = session
+
+        let outputURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("\(UUID().uuidString).mp4")
+
+        try? FileManager.default.removeItem(at: outputURL)
+
+        session.outputURL = outputURL
+        session.outputFileType = .mp4
+        session.shouldOptimizeForNetworkUse = true
+
+        print("Starting re-encode to: \(outputURL.path)")
+        print("Using preset: \(AVAssetExportPresetMediumQuality)")
+
+        self.timer?.invalidate()
+        self.timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            if let progress = self?.exportSession?.progress {
+                self?.eventSink?(Double(progress))
+            }
+        }
+
+        // Timeout fallback
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60) { [weak self] in
+            guard let self = self, let session = self.exportSession, session.status == .exporting else { return }
+            print("Export timeout. Cancelling session.")
+            session.cancelExport()
+            flutterResult(FlutterError(code: "TIMEOUT", message: "Export timeout (60 detik)", details: nil))
+            self.cleanupExport()
+        }
+
+        session.exportAsynchronously {
+            DispatchQueue.main.async {
+                self.timer?.invalidate()
+                self.timer = nil
+                self.handleExportCompletion(session: session, flutterResult: flutterResult)
+            }
+        }
     }
 
     private func cleanupExport() {

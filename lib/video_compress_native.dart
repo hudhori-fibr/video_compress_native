@@ -47,6 +47,14 @@ class VideoCompressNative {
     return resultPath;
   }
 
+  static Future<String?> compressVideo({required String path}) async {
+    final String? resultPath = await _methodChannel.invokeMethod(
+      'compressVideo',
+      {'path': path},
+    );
+    return resultPath;
+  }
+
   static Stream<double> getProgressStream() {
     return _eventChannel.receiveBroadcastStream().map(
       (dynamic event) => event as double,
