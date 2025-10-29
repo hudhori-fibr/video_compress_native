@@ -5,10 +5,11 @@ Flutter plugin for video compression, trimming, and re-encoding with cross-platf
 ## Features
 
 - **Video Compression & Trimming**: Compress video with custom resolution and trim to specific time range
-- **Video Trimming Only**: Trim video without compression
-- **Video Re-encoding**: Re-encode video with standard codec for compatibility (NEW in v0.1.0)
+- **Video Trimming Only**: Trim video without compression  
+- **Video Re-encoding**: Re-encode video with standard codec for compatibility ✨ **NEW in v1.1.22**
 - **Progress Monitoring**: Real-time progress updates during processing
 - **Cross-platform**: Supports both Android and iOS
+- **High Performance**: Native implementation using Media3 (Android) and AVFoundation (iOS)
 
 ## Usage
 
