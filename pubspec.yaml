@@ -1,7 +1,8 @@
 name: video_compress_native
-description: "A new Flutter plugin project."
+description: "Flutter plugin for video compression, trimming, and re-encoding with cross-platform support."
 version: 0.1.0
-homepage:
+homepage: https://github.com/hudhori-fibr/video_compress_native
+repository: https://github.com/hudhori-fibr/video_compress_native
 
 environment:
   sdk: ^3.7.2
