@@ -1,3 +1,7 @@
+## 1.1.24
+
+* Perbaikan kode & publish ulang setelah update kualitas compressVideo (iOS & Android)
+
 ## 1.1.23
 
 * [iOS] `compressVideo` kini menggunakan preset kualitas tertinggi (tidak burem)
