@@ -1,3 +1,9 @@
+## 1.1.23
+
+* [iOS] `compressVideo` kini menggunakan preset kualitas tertinggi (tidak burem)
+* [Android] `compressVideo` otomatis mengikuti bitrate video source (hasil lebih jernih)
+* Perbaikan kualitas hasil re-encode di kedua platform
+
 ## 1.1.22
 
 * Add `compressVideo()` method for video re-encoding without trim/resize
