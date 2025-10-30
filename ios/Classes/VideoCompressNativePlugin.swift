@@ -257,7 +257,7 @@ private func startExport(asset: AVAsset,
 
     private func startCompressionExport(asset: AVAsset, flutterResult: @escaping FlutterResult) {
 
-        guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPreset1920x1080) else {
+        guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPreset1280x720) else {
             flutterResult(FlutterError(code: "SESSION_FAILED", message: "Gagal membuat AVAssetExportSession", details: nil))
             return
         }
@@ -274,7 +274,7 @@ private func startExport(asset: AVAsset,
         session.shouldOptimizeForNetworkUse = true
 
     print("Starting re-encode to: \(outputURL.path)")
-    print("Using preset: \(AVAssetExportPreset1920x1080)")
+    print("Using preset: \(AVAssetExportPreset1280x720)")
 
         self.timer?.invalidate()
         self.timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
