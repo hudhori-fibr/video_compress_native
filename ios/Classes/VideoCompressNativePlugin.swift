@@ -256,7 +256,8 @@ private func startExport(asset: AVAsset,
     }
 
     private func startCompressionExport(asset: AVAsset, flutterResult: @escaping FlutterResult) {
-        guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetMediumQuality) else {
+
+        guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
             flutterResult(FlutterError(code: "SESSION_FAILED", message: "Gagal membuat AVAssetExportSession", details: nil))
             return
         }
@@ -272,8 +273,8 @@ private func startExport(asset: AVAsset,
         session.outputFileType = .mp4
         session.shouldOptimizeForNetworkUse = true
 
-        print("Starting re-encode to: \(outputURL.path)")
-        print("Using preset: \(AVAssetExportPresetMediumQuality)")
+    print("Starting re-encode to: \(outputURL.path)")
+    print("Using preset: \(AVAssetExportPresetHighestQuality)")
 
         self.timer?.invalidate()
         self.timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in

@@ -1,3 +1,7 @@
+## 1.1.25
+
+* Commit ulang seluruh perubahan kode compressVideo (iOS & Android) agar konsisten dengan versi pub.dev
+
 ## 1.1.24
 
 * Perbaikan kode & publish ulang setelah update kualitas compressVideo (iOS & Android)

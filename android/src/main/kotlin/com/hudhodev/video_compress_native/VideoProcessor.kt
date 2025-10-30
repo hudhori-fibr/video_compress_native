@@ -436,8 +436,20 @@ class VideoProcessor {
                 }
             }
 
-            // Use default encoder factory for standard codec re-encoding
+
+            // Ambil bitrate dari source
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(sourcePath)
+            val sourceBitrate = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)?.toIntOrNull() ?: 5_000_000
+            retriever.release()
+
+            // Set encoder dengan bitrate yang sama/sedekat mungkin
+            val videoEncoderSettings = VideoEncoderSettings.Builder()
+                .setBitrate(sourceBitrate)
+                .build()
+
             val encoderFactory = DefaultEncoderFactory.Builder(context.applicationContext)
+                .setVideoEncoderSettings(videoEncoderSettings)
                 .setEnableFallback(true)
                 .build()
 
