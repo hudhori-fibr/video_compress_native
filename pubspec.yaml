@@ -1,6 +1,6 @@
 name: video_compress_native
 description: "Flutter plugin for video compression, trimming, and re-encoding with cross-platform support."
-version: 1.1.26
+version: 1.1.27
 homepage: https://github.com/hudhori-fibr/video_compress_native
 repository: https://github.com/hudhori-fibr/video_compress_native
 
